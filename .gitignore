@@ -1,0 +1,9 @@
+.project
+.classpath
+.settings
+*.class
+bin
+*.tgz
+*.tar.gz
+*.tar.bz2
+*.zip
