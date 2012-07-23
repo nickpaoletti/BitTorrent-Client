@@ -11,6 +11,7 @@ public class FileManager{
 	//This can be found in the TorrentInfo = key_piece_hashes.length
 	//For each row, there is a byte array the size of the length of each piece, in this case 32kB.
 	public static byte[][] pieces;
+	public static boolean[] perPieceBitfield;
 	
 	//Merge together the pieces of the 2D byte array to write the File you downloaded.
 	public static void makeFile(String filename) throws IOException{

@@ -13,7 +13,7 @@ public class Peer{
 	private String mPeerId;
 	private int mPort;
 	private boolean[] mBitfield;
-	//private short[] mDownloadedPieces; (not used atm)
+
 	public Peer(String ip, String peerid, int port){
 		mIp = ip;
 		mPeerId = peerid;

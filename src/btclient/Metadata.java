@@ -35,6 +35,7 @@ public class Metadata {
 		
 		log.finest("Metadata file length: " + fileLength + " bytes.");
 		
+		
 		//Create byte array with the same length of the .torrent file.
 		byte[] torrentBytes = new byte[fileLength];
 		DataInputStream din = new DataInputStream(fileRead);
@@ -113,14 +114,20 @@ public class Metadata {
 		TrackerInfo tracker = new TrackerInfo();
 		//Pass in the torrentData to this new tracker. A bad hack...
 		tracker.setTorrentInfo(torrentData);
+		log.finest("Size of each file piece: " +  tracker.getTorrentInfo().piece_length);
 		//Lets the Tracker know your Peer ID. Useful in the handshake.
 		tracker.setUserPeerId(makePeerID());
+		
 		//Fills up the byte array which will contain the downloaded pieces to have [# of pieces]
-		//pieces of size 32kB.
-		FileManager.pieces = (new byte[tracker.getTorrentInfo().piece_hashes.length][tracker.getTorrentInfo().piece_length]);
+		//pieces of [ADJUST THIS]
+		int numpieces = (int) Math.ceil(tracker.getTorrentInfo().file_length/16384);
+		FileManager.pieces = (new byte[numpieces][16384]);
 		
 		//Initialize the file managers bitfield to all false.
 		FileManager.bitfield = new boolean[tracker.getTorrentInfo().piece_hashes.length];
+		FileManager.perPieceBitfield = new boolean[numpieces];
+		
+		System.out.println("PER PIECE BIT FIELD LENGTH " + FileManager.perPieceBitfield.length);
 		
 		//Open up a new URL connection.
 		URL url = new URL(makeURL(tracker, "starting"));

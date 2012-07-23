@@ -122,35 +122,41 @@ public class Message {
 		 * For the amount of piece hashes, check if that piece has been downloaded from the Peers
 		 * bitfield. If it hasn't, send out a request to download that piece.
 		 */
-		for (int i = 0; i < tracker.getTorrentInfo().piece_hashes.length; i++){
-			if (FileManager.bitfield[i] == false){
-				System.out.println("Requesting Piece # " + i);
-				//Write the index we want
-				dos.writeInt(i);
-				dos.flush();
-				//Write the offset we want
-				dos.writeInt(0);
-				dos.flush();
-				
-				//I'm sorry about the hack, I want to get this working
-				/*Write in the length of the piece you want.
-				 * If it is the last piece, it will be a smaller size than 32kB.
-				 */
-				if (i == tracker.getTorrentInfo().piece_hashes.length - 1){
-					dos.writeInt(tracker.getTorrentInfo().file_length - (tracker.getTorrentInfo().piece_length)*(tracker.getTorrentInfo().piece_hashes.length - 1));
-				}
-				else {
-					dos.writeInt(tracker.getTorrentInfo().piece_length);
-				}
-				dos.flush();
-				
-				//Store the request into a byte array.
-				request = baos.toByteArray();
-				
-				dos.close();
-				baos.close();
-				
-				return request; 
+		int numPieces = tracker.getTorrentInfo().piece_hashes.length;
+		for (int pieceIndex = 0; pieceIndex < numPieces; pieceIndex++){
+			if (FileManager.bitfield[pieceIndex] == false){
+				for (int offsetIndex = 0; offsetIndex < (tracker.getTorrentInfo().piece_length)/(16384); offsetIndex ++){
+					if (FileManager.perPieceBitfield[pieceIndex*(tracker.getTorrentInfo().piece_length)/(16384) + offsetIndex] == false){
+						System.out.println("Requesting Subpiece Index # " + offsetIndex + " of Piece # " + pieceIndex);
+						
+						//Write the index we want
+						dos.writeInt(pieceIndex);
+						dos.flush();
+						//Write the offset we want
+						dos.writeInt(offsetIndex * 16384);
+						dos.flush();
+						
+						//I'm sorry about the hack, I want to get this working
+						/*Write in the length of the piece you want.
+						 * If it is the last piece, it will be a smaller size than 32kB.
+						 */
+						if (pieceIndex == tracker.getTorrentInfo().piece_hashes.length - 1){
+							dos.writeInt(tracker.getTorrentInfo().file_length - (tracker.getTorrentInfo().piece_length)*(tracker.getTorrentInfo().piece_hashes.length - 1));
+						}
+						else {
+							dos.writeInt(16384);
+						}
+						dos.flush();
+						
+						//Store the request into a byte array.
+						request = baos.toByteArray();
+						
+						dos.close();
+						baos.close();
+						
+						return request;
+					}
+				}	 
 			}
 		}
 		
@@ -169,7 +175,7 @@ public class Message {
 		//The beginning index is not really used, but perhaps it will be later. I will store it anyway.
 		int begin = ByteBuffer.wrap(message, 5, 4).getInt();
 		
-		System.out.println("Piece # " + index + " downloaded. Checking SHA Hash..");
+		System.out.println("Piece # " + index + " starting at " + begin  + " downloaded. Checking SHA Hash..");
 		
 		int piecesize = message.length - 9;
 		
@@ -179,24 +185,34 @@ public class Message {
 		//Take the actual data of the piece, and store it. 
 		System.arraycopy(message, 9, filepiece, 0, piecesize);
 		
-		//Check the SHA-1 hash of the piece that is downloaded.
-		MessageDigest digest = MessageDigest.getInstance("SHA-1");
-		digest.update(filepiece);
-		byte[] shahash = digest.digest();
-	
-		System.out.println("Sha hash of downloaded piece:");
-		ToolKit.printString(shahash, false, 0);
-		System.out.println("Sha hash of existing piece:");
-		ToolKit.printString(tracker.getTorrentInfo().piece_hashes[index], false, 0);
+		/* SHA CODE - VERY IMPORTANT!!!! WOOO!!!!!!
+		 * //Check the SHA-1 hash of the piece that is downloaded.
+			MessageDigest digest = MessageDigest.getInstance("SHA-1");
+			digest.update(filepiece);
+			byte[] shahash = digest.digest();
 		
-		//Verify the SHA-1 Hash of the downloaded piece.
-		if(!Arrays.equals(shahash,tracker.getTorrentInfo().piece_hashes[index].array())){
-			throw new IOException("Hash pieces don't match.");
-		}
+			System.out.println("Sha hash of downloaded piece:");
+			ToolKit.printString(shahash, false, 0);
+			System.out.println("Sha hash of existing piece:");
+			ToolKit.printString(tracker.getTorrentInfo().piece_hashes[index], false, 0);
+			
+			//Verify the SHA-1 Hash of the downloaded piece.
+			if(!Arrays.equals(shahash,tracker.getTorrentInfo().piece_hashes[index].array())){
+				throw new IOException("Hash pieces don't match.");
+			}
+		 */
+		
 		
 		//Mark that this piece has been obtained, and store it within the Metadata.
-		FileManager.bitfield[index] = true; 
-		FileManager.pieces[index] = filepiece;
+		FileManager.perPieceBitfield[index * (tracker.getTorrentInfo().piece_length)/(16384) + (begin/16384)] = true;
+		FileManager.pieces[(index * (tracker.getTorrentInfo().piece_length)/(16384))] = filepiece;
+		
+		FileManager.bitfield[index] = true;
+		for (int pieceCount = 0; pieceCount < (tracker.getTorrentInfo().piece_length)/(16384); pieceCount++){
+			if (FileManager.perPieceBitfield[index * (tracker.getTorrentInfo().piece_length)/(16384) + pieceCount] == false){
+				FileManager.bitfield[index] = false;
+			}
+		}
 		
 		//Return a has message with the index you downloaded, which will be sent to the peer
 		//to notify you have the piece. 
