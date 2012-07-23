@@ -1,6 +1,8 @@
+package btclient;
 import java.io.*;
 import java.nio.*;
 import java.util.*;
+import java.util.logging.Logger;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -17,40 +19,33 @@ import java.net.URLConnection;
  */
 
 public class Metadata {
+	private static final Logger log = Logger.getLogger(Metadata.class.getName());
+	
 	public static TorrentInfo torrentData;
 	
 	public Metadata(File torrent) throws IOException, BencodingException{
+		
+		log.fine("Reading metadata from " + torrent);
+		
 		//Learned how to do this from http://www.exampledepot.com/egs/java.io/file2bytearray.html
 		InputStream fileRead = new FileInputStream(torrent);
 		
 		//Store length of the file in integer form.
 		int fileLength = (int)torrent.length();
+		
+		log.finest("Metadata file length: " + fileLength + " bytes.");
+		
 		//Create byte array with the same length of the .torrent file.
 		byte[] torrentBytes = new byte[fileLength];
+		DataInputStream din = new DataInputStream(fileRead);
+		din.readFully(torrentBytes);
 		
-		//Keep track of how many bytes have been read in. 
-		//Offset determines how far into the file you are, while readBytes reads parts of the file a piece at a time
-		int readBytes = 0, offset = 0;
-		
-		//Keeps reading from the file until the whole thing has been read through.
-		//the fileRead.read line in the while statement will read the torrent file byte by byte and place it into the byte array 
-		while (offset < fileLength
-		           && (readBytes=fileRead.read(torrentBytes, offset, torrentBytes.length-offset)) >= 0) {
-				offset += readBytes;
-		}
-
-		//Change the below, I copy pasted it
-		// Ensure all the bytes have been read in
-	    if (offset < torrentBytes.length) {
-	    	fileRead.close();
-	        throw new IOException("Could not completely read file "+torrent.getName());
-	    }
-	
-	    //Close input stream
-	    fileRead.close();
+		//Close input stream
+	    din.close();
 	    
 	    //Return byte array.
 		torrentData = new TorrentInfo(torrentBytes);
+		log.config("Successfully metadata file " + torrent);
 	}
 	
 	
@@ -122,7 +117,10 @@ public class Metadata {
 		tracker.setUserPeerId(makePeerID());
 		//Fills up the byte array which will contain the downloaded pieces to have [# of pieces]
 		//pieces of size 32kB.
-		tracker.setPieces(new byte[tracker.getTorrentInfo().piece_hashes.length][32768]);
+		FileManager.pieces = (new byte[tracker.getTorrentInfo().piece_hashes.length][tracker.getTorrentInfo().piece_length]);
+		
+		//Initialize the file managers bitfield to all false.
+		FileManager.bitfield = new boolean[tracker.getTorrentInfo().piece_hashes.length];
 		
 		//Open up a new URL connection.
 		URL url = new URL(makeURL(tracker, "starting"));

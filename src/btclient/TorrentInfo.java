@@ -1,3 +1,4 @@
+package btclient;
 /*
  *  RUBTClient is a BitTorrent client written at Rutgers University for 
  *  instructional use.

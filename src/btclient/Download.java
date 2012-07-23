@@ -1,3 +1,4 @@
+package btclient;
 import java.io.*;
 import java.net.*;
 
@@ -96,6 +97,7 @@ public class Download{
 					//Keep alive. Do nothing.
 				}
 			}
+			
 			catch (EOFException eof){
 				//Let the tracker know the file is completed downloading, and to stop the download.
 				new URL(data.makeURL(tracker, "completed"));
@@ -104,11 +106,13 @@ public class Download{
 				break;
 			}
 			
+			
 		}
 		//Close input streams. Close socket.
 		dataInputStream.close();
 		dataOutputStream.close();
 		socket.close();
+		
 	}
 		
 	

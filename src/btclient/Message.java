@@ -1,6 +1,8 @@
+package btclient;
 import java.io.*;
 import java.nio.*;
 import java.security.*;
+import java.util.Arrays;
 
 /* Message.java
  * 
@@ -32,7 +34,7 @@ public class Message {
 			case 4:
 				//Have
 			case 5:
-				return bitfield(message, designatedPeer);
+				return bitfield(message, designatedPeer, tracker.getTorrentInfo().piece_hashes.length);
 			case 6:
 				//Request
 			case 7:
@@ -41,7 +43,6 @@ public class Message {
 				//Cancel
 			case 9:
 				//Port
-			break;
 		}
 		return new byte[8];
 	}
@@ -51,34 +52,46 @@ public class Message {
 	 * up each byte into four 'boolean' bits. This is stored within the Peer, and updated
 	 * upon successful downloading of pieces of the file. 
 	 */
-	private static byte[] bitfield(byte[] message, Peer designatedPeer){
-		//Gives the length of the bitfield in bytes
-		int length = message.length - 1;
-
+	private static byte[] bitfield(byte[] message, Peer designatedPeer, int numbits){
+		System.out.println("Peer sent bitfield.");
 		//For each byte in the bitfield reach from the file, there are 8 bits.
-		boolean[] bitfield = new boolean[(length * 8)];
-		for (int i = 1; i < length; i++){
-			//THIS MIGHT NOT WORK. I haven't been able to test it fully.
-			//Convert each bit into a boolean value, starting with the left most bit.
-			//This code adapted from http://stackoverflow.com/questions/3058157/convert-a-byte-into-a-boolean-array-of-length-4-in-java
-			bitfield[(i-1) * 8] = ((message[i] & 128) != 0); 
-			bitfield[((i-1) * 8) + 1] = ((message[i] & 64) != 0); 
-			bitfield[((i-1) * 8) + 2] = ((message[i] & 32) != 0); 
-			bitfield[((i-1) * 8) + 3] = ((message[i] & 16) != 0); 
-			bitfield[((i-1) * 8) + 4] = ((message[i] & 8) != 0); 
-			bitfield[((i-1) * 8) + 5] = ((message[i] & 4) != 0); 
-			bitfield[((i-1) * 8) + 6] = ((message[i] & 2) != 0); 
-			bitfield[((i-1) * 8) + 7] = ((message[i] & 1) != 0); 
+		
+		/* Code for byte to bit conversion (mostly) taken from Rob Moore's BitToBoolean.java
+		 * located at https://sakai.rutgers.edu/portal/site/e07619c5-a492-4ebe-8771-179dfe450ae4/page/0a7200cf-0538-479a-a197-8d398c438484
+		 */
+
+		boolean[] bitfield = new boolean[numbits];
+		int bitcounter = 0;
+		
+		for (int i = 1; i < message.length; i++){
+			for (int bitIndex = 7; bitIndex >= 0; bitIndex++){
+				if (bitcounter >= numbits){
+					break;
+				}
+				
+				if ((message[i] >> bitIndex & 0x01) == 1){
+					bitfield[bitcounter] = true;
+				}
+				else {
+					bitfield[bitcounter] = false;
+				}
+				
+				bitcounter++;
+			}
 		}
 		
 		designatedPeer.setBitfield(bitfield);
 		//After decoding this bitfield, let the peer know you are interested.
+		
+		System.out.println("Sending Interested message to the peer.");
+		
 		return INTERESTED;
 	}
 	
 	//After you send your interest, the peer will give you an unchoke message.
 	//When the peer unchokes you, you can request your first file.
 	private static byte[] unchoke(byte[] message, Peer peer, TrackerInfo tracker) throws IOException{
+		System.out.println("Peer has unchoked you.");
 		return makeRequest(peer, tracker);
 	}
 	
@@ -86,6 +99,9 @@ public class Message {
 	 * It returns a byte array in which has a message requesting that piece. 
 	 */
 	public static byte[] makeRequest(Peer peer, TrackerInfo tracker) throws IOException{
+		//TO ADD: 
+		//WHEN MAKING REQUEST, I SHOULD REQUEST SOMETHING ONLY THAT PEER HAS
+		
 		//The ByteArrayOutput stream helps so that you can construct a Byte array piece by piece,
 		//in conjuction with a DataOutput stream.
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -107,7 +123,8 @@ public class Message {
 		 * bitfield. If it hasn't, send out a request to download that piece.
 		 */
 		for (int i = 0; i < tracker.getTorrentInfo().piece_hashes.length; i++){
-			if (peer.getBitfield()[i] == false){
+			if (FileManager.bitfield[i] == false){
+				System.out.println("Requesting Piece # " + i);
 				//Write the index we want
 				dos.writeInt(i);
 				dos.flush();
@@ -123,7 +140,7 @@ public class Message {
 					dos.writeInt(tracker.getTorrentInfo().file_length - (tracker.getTorrentInfo().piece_length)*(tracker.getTorrentInfo().piece_hashes.length - 1));
 				}
 				else {
-					dos.writeInt(32768);
+					dos.writeInt(tracker.getTorrentInfo().piece_length);
 				}
 				dos.flush();
 				
@@ -132,6 +149,7 @@ public class Message {
 				
 				dos.close();
 				baos.close();
+				
 				return request; 
 			}
 		}
@@ -144,10 +162,15 @@ public class Message {
 	}
 	
 	private static byte[] piece(byte[] message, Peer peer, TrackerInfo tracker) throws IOException, NoSuchAlgorithmException{
+
 		//Store the piece index.
 		int index = ByteBuffer.wrap(message, 1, 4).getInt();
+
 		//The beginning index is not really used, but perhaps it will be later. I will store it anyway.
 		int begin = ByteBuffer.wrap(message, 5, 4).getInt();
+		
+		System.out.println("Piece # " + index + " downloaded. Checking SHA Hash..");
+		
 		int piecesize = message.length - 9;
 		
 		//Create a byte array in which is the size of the piece you are downloading.
@@ -161,14 +184,19 @@ public class Message {
 		digest.update(filepiece);
 		byte[] shahash = digest.digest();
 	
+		System.out.println("Sha hash of downloaded piece:");
+		ToolKit.printString(shahash, false, 0);
+		System.out.println("Sha hash of existing piece:");
+		ToolKit.printString(tracker.getTorrentInfo().piece_hashes[index], false, 0);
+		
 		//Verify the SHA-1 Hash of the downloaded piece.
-		if ( !(ByteBuffer.wrap(shahash).equals(tracker.getTorrentInfo().piece_hashes[index]))){
+		if(!Arrays.equals(shahash,tracker.getTorrentInfo().piece_hashes[index].array())){
 			throw new IOException("Hash pieces don't match.");
 		}
 		
 		//Mark that this piece has been obtained, and store it within the Metadata.
-		peer.getBitfield()[index] = true; 
-		tracker.getPieces()[index] = filepiece;
+		FileManager.bitfield[index] = true; 
+		FileManager.pieces[index] = filepiece;
 		
 		//Return a has message with the index you downloaded, which will be sent to the peer
 		//to notify you have the piece. 

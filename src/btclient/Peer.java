@@ -1,3 +1,4 @@
+package btclient;
 /* Peer.java
  * 
  * by Nick Paoletti and Daniel Selmon
