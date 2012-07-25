@@ -205,7 +205,13 @@ public class Message {
 		
 		//Mark that this piece has been obtained, and store it within the Metadata.
 		FileManager.perPieceBitfield[index * (tracker.getTorrentInfo().piece_length)/(16384) + (begin/16384)] = true;
-		FileManager.pieces[(index * (tracker.getTorrentInfo().piece_length)/(16384))] = filepiece;
+		
+		//Thanks to Rob for helping me with RAF at this point.
+		System.out.println("Writing Bytes " + (index*196608+begin) + "-" + ( index*196608+begin+16384));
+		FileManager.file.seek(( index*196608+begin));
+		FileManager.file.write(filepiece);
+
+		//[(index * (tracker.getTorrentInfo().piece_length)/(16384))] = filepiece;
 		
 		FileManager.bitfield[index] = true;
 		for (int pieceCount = 0; pieceCount < (tracker.getTorrentInfo().piece_length)/(16384); pieceCount++){

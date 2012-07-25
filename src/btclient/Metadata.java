@@ -121,7 +121,7 @@ public class Metadata {
 		//Fills up the byte array which will contain the downloaded pieces to have [# of pieces]
 		//pieces of [ADJUST THIS]
 		int numpieces = (int) Math.ceil(tracker.getTorrentInfo().file_length/16384);
-		FileManager.pieces = (new byte[numpieces][16384]);
+		//FileManager.pieces = (new byte[numpieces][16384]);
 		
 		//Initialize the file managers bitfield to all false.
 		FileManager.bitfield = new boolean[tracker.getTorrentInfo().piece_hashes.length];

@@ -63,9 +63,18 @@ class RUBTClient {
 			// the file using
 			// the given tracker info.
 			data = new Metadata(new File(args[0]));
+			File f = new File(args[1]);
+			//Code obtained partially from here: http://www.java2s.com/Code/Java/File-Input-Output/Appendingdatatoexistingfile.htm
+			FileManager.file = new RandomAccessFile(f, "rw");
+			if (f.exists()){
+				
+				//READ IN DATA FROM STUFF.
+				//CHECK IF FULL, ETC.
+			}
+			
 			tracker = data.httpGetRequest();
 			Download.downloadFile(tracker, data);
-			FileManager.makeFile(args[1]);
+			//FileManager.makeFile(args[1]);
 		} catch (BencodingException e) {
 			// Throw exception in the case of Bencoding issue
 			System.out.println(e.toString());
