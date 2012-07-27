@@ -16,7 +16,7 @@ import java.util.ArrayList;
 public class TrackerInfo{
 	//Fields stored within the tracker info, corresponding to the values found in a HTTP GET request.
 	private TorrentInfo mTorrentInfo;
-	private String mUserPeerId;
+	private byte[] userPeerId;
 	private int mIncomplete, mDownloaded, mComplete, mMinInterval, mInterval;
 	private ArrayList<Peer> mPeers;
 	
@@ -30,8 +30,8 @@ public class TrackerInfo{
 	public void setTorrentInfo(TorrentInfo info) {
 		mTorrentInfo = info;
 	}
-	public void setUserPeerId(String userpeerid) {
-		mUserPeerId = userpeerid;
+	public void setUserPeerId(byte[] userpeerid) {
+		userPeerId = userpeerid;
 	}
 	public void setIncomplete(int incomplete) {
 		mIncomplete = incomplete;
@@ -51,8 +51,8 @@ public class TrackerInfo{
 	public TorrentInfo getTorrentInfo() {
 		return mTorrentInfo;
 	}
-	public String getUserPeerId() {
-		return mUserPeerId;
+	public byte[] getUserPeerId() {
+		return userPeerId;
 	}
 	public int getIncomplete() {
 		return mIncomplete;

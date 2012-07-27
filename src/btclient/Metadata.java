@@ -64,11 +64,17 @@ public class Metadata {
 	}
 	
 	//Create a randomly generated 20 digit Peer ID with prefix "SWAG" to denote the client.
-	private String makePeerID(){
-		Random rand = new Random();
-		String peerid = "SWAG";
-		for (int i = 0; i < 16; i++){
-			peerid = peerid + Integer.toHexString(rand.nextInt(0xF));
+	private byte[] makePeerID(){
+		byte[] peerid = new byte[20];
+		peerid[0] = 'S';
+		peerid[1] = 'W';
+		peerid[2] = 'A';
+		peerid[3] = 'G';
+		
+		Random rand = new Random(System.currentTimeMillis());
+		
+		for (int i = 4; i < peerid.length; i++){
+			peerid[i] = (byte)(rand.nextInt(26) + 'A');
 		}
 
 		return peerid;
@@ -126,8 +132,7 @@ public class Metadata {
 		//Initialize the file managers bitfield to all false.
 		FileManager.bitfield = new boolean[tracker.getTorrentInfo().piece_hashes.length];
 		FileManager.perPieceBitfield = new boolean[numpieces];
-		
-		System.out.println("PER PIECE BIT FIELD LENGTH " + FileManager.perPieceBitfield.length);
+	
 		
 		//Open up a new URL connection.
 		URL url = new URL(makeURL(tracker, "starting"));
@@ -168,9 +173,9 @@ public class Metadata {
 			 * TrackerInfo objects ArrayList of Peers.
 			 */
 			if(keyAsString.equals("peers")){
-				Integer port = 0;
+				int port = 0;
 				String ip = "";
-				String peerid = "";
+				byte[] peerid = new byte[20];
 				ArrayList<HashMap<ByteBuffer, Object>> peerList = (ArrayList<HashMap<ByteBuffer, Object>>)dictionary.get(key);
 				for(HashMap<ByteBuffer, Object> entry : peerList){
 					for(ByteBuffer b : entry.keySet()){
@@ -182,10 +187,10 @@ public class Metadata {
 							ip = new String(((ByteBuffer) entry.get(b)).array());
 						}
 						if(temp.equals("peer id")){
-							peerid = new String(((ByteBuffer) entry.get(b)).array());
+							peerid = ((ByteBuffer) entry.get(b)).array();
 						}
 					}
-					tracker.getPeers().add(new Peer(ip, peerid, port));
+					tracker.getPeers().add(new Peer(ip, port, peerid, torrentData.piece_hashes.length));
 				}
 			}
 	    }

@@ -1,6 +1,14 @@
 package btclient;
 import java.io.*;
 import java.net.*;
+import java.util.Arrays;
+import java.util.logging.Logger;
+
+import btclient.message.BitfieldMessage;
+import btclient.message.HaveMessage;
+import btclient.message.Message;
+import btclient.message.PieceMessage;
+import btclient.message.RequestMessage;
 
 /* Download.java
  * 
@@ -11,69 +19,20 @@ import java.net.*;
  * download until all the required pieces have been obtained. 
  */
 public class Download{
+	
+	private static final Logger log = Logger.getLogger(Download.class.getName());
+	
 	/*
 	 * This is the method that will Download the file, given the info held in the tracker.
 	 * It first starts by establishing the handshake, then reading and sending messages until
 	 * the entire piece has been downloaded. 
 	 */
 	static Peer designatedPeer;
-	static DataInputStream dataInputStream;
-	static DataOutputStream dataOutputStream;
-	
-	private static void makeHandshake(TrackerInfo tracker) throws Exception{
-		//Make the socket needed and create DataInput and Output streams
-		designatedPeer = findPeer(tracker);
-		designatedPeer.socket = new Socket(designatedPeer.getIP(), designatedPeer.getPort());
-		dataInputStream = new DataInputStream(designatedPeer.socket.getInputStream());
-		dataOutputStream = new DataOutputStream(designatedPeer.socket.getOutputStream());
-		
-		/*MAKE HANDSHAKE*/
-		//Some code here taken from Ernest-Friedman Hill @ http://www.coderanch.com/t/397984/java/java/we-store-integer-byte-array
-		//From here is where I got the idea of a ByteArrayOutputStream (quite convenient!), which I use throughout my code. 
-		byte[] clientHandshake;
-		
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		DataOutputStream dos = new DataOutputStream(baos);
-		
-		//Write in String length and String Idenitifer
-		dos.write((byte)19);
-		dos.flush();
-		dos.writeBytes("BitTorrent protocol");
-		dos.flush();
-		//Write 8 blank bytes.
-		dos.write(new byte[8]);
-		dos.flush();
-		//Writes in the info hash & peer id.
-		dos.write(tracker.getTorrentInfo().info_hash.array());
-		dos.flush();
-		dos.writeBytes(tracker.getUserPeerId());
-		dos.flush();
-		
-		//Write in these 68 bytes into our array. Awesome.
-		clientHandshake = baos.toByteArray();
-		baos.close();
-		dos.close();
-		
-		//Send the handshake.
-		dataOutputStream.write(clientHandshake);
-		//"Always flush yo shit" - Mahatma Gandhi, 2012
-		dataOutputStream.flush();
-		//Read in the hosts handshake.
-		byte[] hostHandshake = new byte[68];
-		dataInputStream.readFully(hostHandshake);
-
-		//Check the info hashes
-		for (int i = 28; i < 48; i++){
-			if (hostHandshake[i] != clientHandshake[i]){
-				throw new Exception("Info hashes don't match when receiving handshake.");
-			}
-		} 
-		//Should check Peer ID
-	}
-	
 	
 	public static void downloadFile(TrackerInfo tracker, Metadata data) throws Exception{
-		makeHandshake(tracker);
+		designatedPeer = findRobsGoodPeer(tracker);
+		System.out.println(designatedPeer.getIP());
+		designatedPeer.handshake(data.torrentData.info_hash.array(), tracker.getUserPeerId());
 		
 		//Tell the tracker I started downloading.
 		new URL(data.makeURL(tracker, "started"));
@@ -81,31 +40,33 @@ public class Download{
 		//Keep looping until file is completed download. 
 		while (true){
 			try {
+				log.fine("Going through message read loop");
 				//Grab length prefix and create byte array of that length.
-				int messageLength = dataInputStream.readInt();
-				System.out.println("Message Length: " + messageLength);
-
-				//Read in the rest of the message, of length given by the message.
-				byte[] message = new byte[messageLength];
-				dataInputStream.readFully(message);
-
+				Message message = designatedPeer.getNextMessageBlocking();
+				
 				//If the message is not a keep alive, decode it, then send a corresponding message.
-				if (message.length != 0){
-					/*
-					dataOutputStream.write();
-					dataOutputStream.flush();*/
-					Message.decode(message, designatedPeer, tracker);
-					/*If the message was a piece you received, the above dataOutputStream.write will
-					 * write a "Has" message to let the peer know you have the file. You then will request
-					 * the next file.
-					 */
-					/*
-					if((int)message[0] == 7){
-						dataOutputStream.write(Message.makeRequest(designatedPeer, tracker));
-						dataOutputStream.flush();
-						
+				if (message != null){
+					switch(message.getType()){
+					case Message.TYPE_CHOKE:
+						break;
+					case Message.TYPE_UNCHOKE:
+						//Send Request.
+						break;
+					case Message.TYPE_INTERESTED:
+						break;
+					case Message.TYPE_UNINTERESTED:
+						break;
+					case Message.TYPE_HAVE:
+						break;
+					case Message.TYPE_BITFIELD:
+						designatedPeer.sendMessage(message);
+					case Message.TYPE_REQUEST:
+						break;
+					case Message.TYPE_PIECE: 
+						break;
+					default:
+						log.severe("Unrecognized message type: " + ('0'+message.getType()));
 					}
-					*/
 				}
 				else {
 					//Keep alive. Do nothing.
@@ -121,9 +82,8 @@ public class Download{
 			}	
 		}
 		//Close input streams. Close socket.
-		dataInputStream.close();
-		dataOutputStream.close();
-		designatedPeer.socket.close();
+		
+		designatedPeer.disconnect();
 		
 	}
 		
@@ -131,11 +91,14 @@ public class Download{
 	/*
 	 * Returns the peer with the peer that matches the IP address request for the project.
 	 */
-	private static Peer findPeer(TrackerInfo tracker) throws Exception{
+	private static Peer findRobsGoodPeer(TrackerInfo tracker) throws Exception{
 		Peer designatedPeer = null;
 		//Look through all peers
+		byte[] peerIdToMatch = new byte[]{'R', 'U', 'B', 'T', '1', '1'};
+
 		for (int i = 0; i < tracker.getPeers().size(); i++){
-			if(tracker.getPeers().get(i).getIP().equals("128.6.5.130") && tracker.getPeers().get(i).getPeerId().substring(0, 6).equals("RUBT11")){
+			if( tracker.getPeers().get(i).getIP().equals("128.6.5.130") && 
+					Arrays.equals(Arrays.copyOfRange(tracker.getPeers().get(i).getPeerId(), 0, 6), peerIdToMatch)) {
 				//Found the peer that is wanted for this part of the project.
 				designatedPeer = tracker.getPeers().get(i);
 			}
