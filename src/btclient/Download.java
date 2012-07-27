@@ -1,6 +1,8 @@
 package btclient;
 import java.io.*;
 import java.net.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.logging.Logger;
 
@@ -172,23 +174,8 @@ public class Download{
         return null;
 	}
 	
-	private static Message savePiece(PieceMessage piece, TrackerInfo tracker) throws IOException{   
-        /* SHA CODE - VERY IMPORTANT!!!! WOOO!!!!!!
-         * //Check the SHA-1 hash of the piece that is downloaded.
-                MessageDigest digest = MessageDigest.getInstance("SHA-1");
-                digest.update(filepiece);
-                byte[] shahash = digest.digest();
-        
-                System.out.println("Sha hash of downloaded piece:");
-                ToolKit.printString(shahash, false, 0);
-                System.out.println("Sha hash of existing piece:");
-                ToolKit.printString(tracker.getTorrentInfo().piece_hashes[index], false, 0);
-                
-                //Verify the SHA-1 Hash of the downloaded piece.
-                if(!Arrays.equals(shahash,tracker.getTorrentInfo().piece_hashes[index].array())){
-                        throw new IOException("Hash pieces don't match.");
-                }
-         */
+	private static Message savePiece(PieceMessage piece, TrackerInfo tracker) throws IOException, NoSuchAlgorithmException{   
+		
         
         
         //Mark that this piece has been obtained, and store it within the Metadata.
@@ -215,10 +202,33 @@ public class Download{
         
         }
         
+        //If you downloaded the whole piece, check the SHA-Hash. This still really needs to be updated.
         if (FileManager.bitfield[piece.getIndex()] == true){
-        	return new HaveMessage(piece.getIndex());
+        	System.out.println("Full piece downloaded. ");
+            
+            byte[] pieceCheck = new byte[(tracker.getTorrentInfo().piece_length)];
+            FileManager.file.seek(piece.getIndex() * (tracker.getTorrentInfo().piece_length));
+            FileManager.file.readFully(pieceCheck);
+            MessageDigest digest = MessageDigest.getInstance("SHA-1");
+    		digest.update(pieceCheck);
+    		byte[] shahash = digest.digest();
+
+    		System.out.println("Sha hash of downloaded piece:");
+    		ToolKit.printString(shahash, false, 0);
+    		System.out.println("Sha has h of existing piece:");
+    		ToolKit.printString(tracker.getTorrentInfo().piece_hashes[piece.getIndex()],
+    				false, 0);
+
+    		// Verify the SHA-1 Hash of the downloaded piece.
+    		if (!Arrays.equals(shahash,
+    				tracker.getTorrentInfo().piece_hashes[piece.getIndex()].array())) {
+    			System.out.println("Hash pieces don't match. Deleteing piece.");
+    		}
+            
+            if (FileManager.bitfield[piece.getIndex()] == true){
+            	return new HaveMessage(piece.getIndex());
+            } 
         }
-        
         return null;
 	}
 }
