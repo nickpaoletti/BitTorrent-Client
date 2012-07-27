@@ -21,12 +21,13 @@ public class Message {
 	//When given a message from the Peer, respond with a byte array that is a fitting response.
 	//This is not the approach which will remain in future parts of the project, and is very
 	//limited in functionality.
-	public static byte[] decode(byte[] message, Peer designatedPeer, TrackerInfo tracker) throws IOException, NoSuchAlgorithmException{
+	public static void decode(byte[] message, Peer designatedPeer, TrackerInfo tracker) throws IOException, NoSuchAlgorithmException{
 		switch ((int)message[0]){
 			case 0:
 				//Choke
 			case 1:
-				return unchoke(message, designatedPeer, tracker);
+				unchoke(message, designatedPeer, tracker);
+				return;
 			case 2: 
 				//Interested
 			case 3:
@@ -34,17 +35,19 @@ public class Message {
 			case 4:
 				//Have
 			case 5:
-				return bitfield(message, designatedPeer, tracker.getTorrentInfo().piece_hashes.length);
+				bitfield(message, designatedPeer, tracker.getTorrentInfo().piece_hashes.length);
+				return;
 			case 6:
 				//Request
 			case 7:
-				return piece(message, designatedPeer, tracker);
+				System.out.println((int)message[0]);
+				piece(message, designatedPeer, tracker);
+				return;
 			case 8:
 				//Cancel
 			case 9:
 				//Port
 		}
-		return new byte[8];
 	}
 	
 	/*
@@ -52,7 +55,7 @@ public class Message {
 	 * up each byte into four 'boolean' bits. This is stored within the Peer, and updated
 	 * upon successful downloading of pieces of the file. 
 	 */
-	private static byte[] bitfield(byte[] message, Peer designatedPeer, int numbits){
+	private static void bitfield(byte[] message, Peer designatedPeer, int numbits) throws IOException{
 		System.out.println("Peer sent bitfield.");
 		//For each byte in the bitfield reach from the file, there are 8 bits.
 		
@@ -85,20 +88,24 @@ public class Message {
 		
 		System.out.println("Sending Interested message to the peer.");
 		
-		return INTERESTED;
+		Download.dataOutputStream.write(INTERESTED);
+		Download.dataOutputStream.flush();
 	}
 	
 	//After you send your interest, the peer will give you an unchoke message.
 	//When the peer unchokes you, you can request your first file.
-	private static byte[] unchoke(byte[] message, Peer peer, TrackerInfo tracker) throws IOException{
+	private static void unchoke(byte[] message, Peer peer, TrackerInfo tracker) throws IOException{
 		System.out.println("Peer has unchoked you.");
-		return makeRequest(peer, tracker);
+		makeRequest(peer, tracker);
+		/*
+		
+		*/
 	}
 	
 	/*This method is responsible for finding the first piece you do not have, and requesting it.
 	 * It returns a byte array in which has a message requesting that piece. 
 	 */
-	public static byte[] makeRequest(Peer peer, TrackerInfo tracker) throws IOException{
+	public static void makeRequest(Peer peer, TrackerInfo tracker) throws IOException{
 		//TO ADD: 
 		//WHEN MAKING REQUEST, I SHOULD REQUEST SOMETHING ONLY THAT PEER HAS
 		
@@ -122,8 +129,8 @@ public class Message {
 		 * For the amount of piece hashes, check if that piece has been downloaded from the Peers
 		 * bitfield. If it hasn't, send out a request to download that piece.
 		 */
-		int numPieces = tracker.getTorrentInfo().piece_hashes.length;
-		for (int pieceIndex = 0; pieceIndex < numPieces; pieceIndex++){
+		
+		for (int pieceIndex = 0; pieceIndex < FileManager.bitfield.length; pieceIndex++){
 			if (FileManager.bitfield[pieceIndex] == false){
 				for (int offsetIndex = 0; offsetIndex < (tracker.getTorrentInfo().piece_length)/(16384); offsetIndex ++){
 					if (FileManager.perPieceBitfield[pieceIndex*(tracker.getTorrentInfo().piece_length)/(16384) + offsetIndex] == false){
@@ -136,16 +143,8 @@ public class Message {
 						dos.writeInt(offsetIndex * 16384);
 						dos.flush();
 						
-						//I'm sorry about the hack, I want to get this working
-						/*Write in the length of the piece you want.
-						 * If it is the last piece, it will be a smaller size than 32kB.
-						 */
-						if (pieceIndex == tracker.getTorrentInfo().piece_hashes.length - 1){
-							dos.writeInt(tracker.getTorrentInfo().file_length - (tracker.getTorrentInfo().piece_length)*(tracker.getTorrentInfo().piece_hashes.length - 1));
-						}
-						else {
-							dos.writeInt(16384);
-						}
+						dos.writeInt(16384);
+						
 						dos.flush();
 						
 						//Store the request into a byte array.
@@ -154,7 +153,9 @@ public class Message {
 						dos.close();
 						baos.close();
 						
-						return request;
+						Download.dataOutputStream.write(request);
+						Download.dataOutputStream.flush();
+						return;
 					}
 				}	 
 			}
@@ -167,8 +168,7 @@ public class Message {
 		throw new EOFException("Got all pieces");
 	}
 	
-	private static byte[] piece(byte[] message, Peer peer, TrackerInfo tracker) throws IOException, NoSuchAlgorithmException{
-
+	private static void piece(byte[] message, Peer peer, TrackerInfo tracker) throws IOException, NoSuchAlgorithmException{
 		//Store the piece index.
 		int index = ByteBuffer.wrap(message, 1, 4).getInt();
 
@@ -215,14 +215,26 @@ public class Message {
 		
 		FileManager.bitfield[index] = true;
 		for (int pieceCount = 0; pieceCount < (tracker.getTorrentInfo().piece_length)/(16384); pieceCount++){
-			if (FileManager.perPieceBitfield[index * (tracker.getTorrentInfo().piece_length)/(16384) + pieceCount] == false){
-				FileManager.bitfield[index] = false;
+			//If we're at the final step, we can't use the bottom statement which will cause OutOfBounds issues.
+			try {
+				if (FileManager.perPieceBitfield[index * (tracker.getTorrentInfo().piece_length)/(16384) + pieceCount] == false){
+					FileManager.bitfield[index] = false;
+				}
 			}
+			catch (ArrayIndexOutOfBoundsException aioobe) {
+				 //Aiiobe sounds pretty silly. Just throwing that out there.
+				System.out.println(index + " " + pieceCount);
+				System.out.println(FileManager.bitfield[index]);
+			}
+		
 		}
 		
-		//Return a has message with the index you downloaded, which will be sent to the peer
-		//to notify you have the piece. 
-		return has(index);
+		if (FileManager.bitfield[index] == true){
+			Download.dataOutputStream.write(has(index));
+			Download.dataOutputStream.flush();
+		}
+		
+		makeRequest(peer, tracker);
 	}
 	
 	/*

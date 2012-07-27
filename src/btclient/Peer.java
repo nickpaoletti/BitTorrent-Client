@@ -1,4 +1,6 @@
 package btclient;
+
+import java.net.Socket;
 /* Peer.java
  * 
  * by Nick Paoletti and Daniel Selmon
@@ -13,6 +15,7 @@ public class Peer{
 	private String mPeerId;
 	private int mPort;
 	private boolean[] mBitfield;
+	public Socket socket;
 
 	public Peer(String ip, String peerid, int port){
 		mIp = ip;

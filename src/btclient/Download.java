@@ -16,12 +16,16 @@ public class Download{
 	 * It first starts by establishing the handshake, then reading and sending messages until
 	 * the entire piece has been downloaded. 
 	 */
-	public static void downloadFile(TrackerInfo tracker, Metadata data) throws Exception{
+	static Peer designatedPeer;
+	static DataInputStream dataInputStream;
+	static DataOutputStream dataOutputStream;
+	
+	private static void makeHandshake(TrackerInfo tracker) throws Exception{
 		//Make the socket needed and create DataInput and Output streams
-		Peer designatedPeer = findPeer(tracker);
-		Socket socket = new Socket(designatedPeer.getIP(), designatedPeer.getPort());
-		DataInputStream dataInputStream = new DataInputStream(socket.getInputStream());
-		DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+		designatedPeer = findPeer(tracker);
+		designatedPeer.socket = new Socket(designatedPeer.getIP(), designatedPeer.getPort());
+		dataInputStream = new DataInputStream(designatedPeer.socket.getInputStream());
+		dataOutputStream = new DataOutputStream(designatedPeer.socket.getOutputStream());
 		
 		/*MAKE HANDSHAKE*/
 		//Some code here taken from Ernest-Friedman Hill @ http://www.coderanch.com/t/397984/java/java/we-store-integer-byte-array
@@ -65,6 +69,11 @@ public class Download{
 			}
 		} 
 		//Should check Peer ID
+	}
+	
+	
+	public static void downloadFile(TrackerInfo tracker, Metadata data) throws Exception{
+		makeHandshake(tracker);
 		
 		//Tell the tracker I started downloading.
 		new URL(data.makeURL(tracker, "started"));
@@ -74,6 +83,7 @@ public class Download{
 			try {
 				//Grab length prefix and create byte array of that length.
 				int messageLength = dataInputStream.readInt();
+				System.out.println("Message Length: " + messageLength);
 
 				//Read in the rest of the message, of length given by the message.
 				byte[] message = new byte[messageLength];
@@ -81,17 +91,21 @@ public class Download{
 
 				//If the message is not a keep alive, decode it, then send a corresponding message.
 				if (message.length != 0){
-					dataOutputStream.write(Message.decode(message, designatedPeer, tracker));
-					dataOutputStream.flush();
+					/*
+					dataOutputStream.write();
+					dataOutputStream.flush();*/
+					Message.decode(message, designatedPeer, tracker);
 					/*If the message was a piece you received, the above dataOutputStream.write will
 					 * write a "Has" message to let the peer know you have the file. You then will request
 					 * the next file.
 					 */
+					/*
 					if((int)message[0] == 7){
 						dataOutputStream.write(Message.makeRequest(designatedPeer, tracker));
 						dataOutputStream.flush();
 						
 					}
+					*/
 				}
 				else {
 					//Keep alive. Do nothing.
@@ -104,14 +118,12 @@ public class Download{
 				new URL(data.makeURL(tracker, "stopped"));
 				System.out.println("File Complete");
 				break;
-			}
-			
-			
+			}	
 		}
 		//Close input streams. Close socket.
 		dataInputStream.close();
 		dataOutputStream.close();
-		socket.close();
+		designatedPeer.socket.close();
 		
 	}
 		
