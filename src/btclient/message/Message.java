@@ -129,6 +129,7 @@ public class Message {
 		dos.writeInt(msg.length);
 		if (msg.length > 0) {
 			dos.writeByte(msg.type);
+			System.out.println("Message Type: " + msg.type);
 			switch (msg.type) {
 			case TYPE_HAVE:
 				dos.writeInt(((HaveMessage)msg).getIndex());

@@ -39,7 +39,11 @@ public class Peer {
 		// Defaults to "false"
 		this.bitfield = new boolean[numPieces];
 	}
-
+	
+	public void newBitfield(boolean[] bitfield){
+		this.bitfield = bitfield;
+	}
+	
 	public String getIP() {
 		return ip;
 	}
