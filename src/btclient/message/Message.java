@@ -75,10 +75,8 @@ public class Message {
 	// project, and is very
 	// limited in functionality.
 	public static Message decode(final InputStream in) throws IOException {
-		log.fine("Message.decode: Decoding message");
 		DataInputStream din = new DataInputStream(in);
 		int length = din.readInt();
-		log.fine("Message.decode: Message length: " + length);
 		if (length == 0) {
 			return KEEP_ALIVE;
 		}
@@ -177,8 +175,8 @@ public class Message {
 		boolean[] bitfield = new boolean[numbits];
 		int bitcounter = 0;
 
-		for (int i = 1; i < message.length; i++) {
-			for (int bitIndex = 7; bitIndex >= 0; bitIndex++) {
+		for (int i = 0; i < message.length ; ++i) {
+			for (int bitIndex = 7; bitIndex >= 0; --bitIndex) {
 				if (bitcounter >= numbits) {
 					break;
 				}

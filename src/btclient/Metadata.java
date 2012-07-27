@@ -132,6 +132,7 @@ public class Metadata {
 		//Initialize the file managers bitfield to all false.
 		FileManager.bitfield = new boolean[tracker.getTorrentInfo().piece_hashes.length];
 		FileManager.perPieceBitfield = new boolean[numpieces];
+		FileManager.isRequested = new ByteBuffer[numpieces];
 	
 		
 		//Open up a new URL connection.
@@ -173,6 +174,7 @@ public class Metadata {
 			 * TrackerInfo objects ArrayList of Peers.
 			 */
 			if(keyAsString.equals("peers")){
+				FileManager.approvedPeers = new ArrayList<Peer>();
 				int port = 0;
 				String ip = "";
 				byte[] peerid = new byte[20];
@@ -190,7 +192,12 @@ public class Metadata {
 							peerid = ((ByteBuffer) entry.get(b)).array();
 						}
 					}
-					tracker.getPeers().add(new Peer(ip, port, peerid, torrentData.piece_hashes.length));
+					Peer peerToAdd = new Peer(ip, port, peerid, torrentData.piece_hashes.length);
+					tracker.getPeers().add(peerToAdd);
+					if (peerToAdd.getIP().equals("128.6.5.131") || peerToAdd.getIP().equals("128.6.5.130")){
+						FileManager.approvedPeers.add(peerToAdd);
+					}
+					
 				}
 			}
 	    }

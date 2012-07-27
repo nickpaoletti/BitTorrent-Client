@@ -31,6 +31,7 @@ public class Peer {
 	private Socket socket;
 	private InputStream in;
 	private OutputStream out;
+	private boolean isConnected;
 
 	public Peer(String ip, int port, byte[] peerid, int numPieces) {
 		this.ip = ip;
@@ -48,6 +49,20 @@ public class Peer {
 		return ip;
 	}
 
+	public boolean getIsConnected(){
+		return this.isConnected;
+	}
+	
+	public void changeStatus(boolean status){
+		this.isConnected = status;
+	}
+	
+	public void printBitfield(){
+		System.out.println("");
+		for (int i = 0; i < bitfield.length; i ++){
+			System.out.print(i + ":" + bitfield[i] + ",");
+		}
+	}
 	public byte[] getPeerId() {
 		return this.peerId;
 	}
@@ -58,6 +73,11 @@ public class Peer {
 
 	public boolean[] getBitfield() {
 		return this.bitfield;
+	}
+	
+	public void changeBitfield(int index, boolean status){
+		bitfield[index] = status;
+		return;
 	}
 
 	@Override

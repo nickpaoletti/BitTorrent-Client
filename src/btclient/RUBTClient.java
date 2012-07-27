@@ -73,7 +73,27 @@ class RUBTClient {
 			}
 			
 			tracker = data.httpGetRequest();
-			Download.downloadFile(tracker, data);
+			FileManager.tracker = tracker;
+			FileManager.data = data;
+			
+			for (int i = 0; i < FileManager.approvedPeers.size(); i++){
+				Download peer = new Download();
+				new Thread(peer).start();
+			}
+			/*
+			Download peerOne = new Download();
+			new Thread(peerOne).start();
+			
+			Download peerTwo = new Download();
+			new Thread(peerTwo).start();
+			
+			Download peerThree = new Download();
+			new Thread(peerThree).start();
+			
+			Download peerFour = new Download();
+			new Thread(peerFour).start();
+			*/
+			
 			//FileManager.makeFile(args[1]);
 		} catch (BencodingException e) {
 			// Throw exception in the case of Bencoding issue

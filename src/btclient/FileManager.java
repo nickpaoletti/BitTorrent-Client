@@ -3,11 +3,14 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
 public class FileManager{
 	//This array keeps track of how many pieces you have downloaded:
 	public static boolean[] bitfield;
-	
+	static Metadata data;
+	static TrackerInfo tracker;
 	//This 2D byte array has x rows, where x is the amount of pieces in the torrent.
 	//This can be found in the TorrentInfo = key_piece_hashes.length
 	//For each row, there is a byte array the size of the length of each piece, in this case 32kB.
@@ -16,7 +19,9 @@ public class FileManager{
 	public static byte[][] pieces;
 	*/
 	public static boolean[] perPieceBitfield;
+	public static ByteBuffer[] isRequested;
 	public static RandomAccessFile file;
+	public static ArrayList<Peer> approvedPeers;
 	
 	//Merge together the pieces of the 2D byte array to write the File you downloaded.
 	/*
