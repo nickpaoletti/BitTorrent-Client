@@ -1,10 +1,14 @@
 package btclient;
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Scanner;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
+
+import btclient.bencoding.BencodingException;
 
 /* RUBTClient.java
  * 
@@ -17,6 +21,7 @@ import java.util.logging.Logger;
 class RUBTClient {
 
 	private static final Level LOG_LEVEL = Level.ALL;
+	public static boolean keepRunning = true;
 
 	
 	static {
@@ -41,15 +46,12 @@ class RUBTClient {
 		replaceConsoleHandler(rootLogger, LOG_LEVEL);
 	}
 	
-	private static final Logger log = Logger.getLogger(RUBTClient.class
-			.getName());
+	private static final Logger log = Logger.getLogger(RUBTClient.class.getName());
 //	static {
 //		log.setLevel(Level.ALL);
 //	}
 
 	public static void main(String[] args) {
-		
-	
 		Metadata data = null;
 		TrackerInfo tracker = null;
 		if (args.length != 2) {
@@ -64,24 +66,35 @@ class RUBTClient {
 			// the given tracker info.
 			data = new Metadata(new File(args[0]));
 			File f = new File(args[1]);
+			FileManager.initializeFields(data);
 			//Code obtained partially from here: http://www.java2s.com/Code/Java/File-Input-Output/Appendingdatatoexistingfile.htm
 			FileManager.file = new RandomAccessFile(f, "rw");
 			if (f.exists()){
-				
-				//READ IN DATA FROM STUFF.
-				//CHECK IF FULL, ETC.
+				FileManager.readFileProgress(args[1]);
 			}
 			
 			tracker = data.httpGetRequest();
 			FileManager.tracker = tracker;
 			FileManager.data = data;
 			
+			ArrayList<Thread> peerThreads = new ArrayList<Thread>();
 			for (int i = 0; i < FileManager.approvedPeers.size(); i++){
 				Download peer = new Download();
-				new Thread(peer).start();
+				peerThreads.add(new Thread(peer));
+				peerThreads.get(i).start();
+			}
+		    
+			
+			BufferedReader quitStatus = new BufferedReader(new InputStreamReader(System.in));
+			String input = quitStatus.readLine();
+			
+			while(!input.equalsIgnoreCase("q")){
+				input = quitStatus.readLine();
+				System.out.println(input);
 			}
 			
-			FileManager.storeFileProgress(args[0]);
+			keepRunning = false; 
+			FileManager.storeFileProgress(args[1]);
 		} catch (BencodingException e) {
 			// Throw exception in the case of Bencoding issue
 			System.out.println(e.toString());

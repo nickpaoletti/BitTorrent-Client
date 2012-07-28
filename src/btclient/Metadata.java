@@ -7,6 +7,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 
+import btclient.bencoding.Bencoder2;
+import btclient.bencoding.BencodingException;
+import btclient.message.HaveMessage;
+
 /* Metadata.java
  * 
  * by Nick Paoletti and Daniel Selmon
@@ -48,7 +52,6 @@ public class Metadata {
 		torrentData = new TorrentInfo(torrentBytes);
 		log.config("Successfully metadata file " + torrent);
 	}
-	
 	
 	//Takes in a ByteBuffer in as its argument and returns a String of the escaped info hash.
 	private String returnInfoHash(ByteBuffer infohash){
@@ -124,17 +127,6 @@ public class Metadata {
 		//Lets the Tracker know your Peer ID. Useful in the handshake.
 		tracker.setUserPeerId(makePeerID());
 		
-		//Fills up the byte array which will contain the downloaded pieces to have [# of pieces]
-		//pieces of [ADJUST THIS]
-		int numpieces = (int) Math.ceil(tracker.getTorrentInfo().file_length/16384);
-		//FileManager.pieces = (new byte[numpieces][16384]);
-		
-		//Initialize the file managers bitfield to all false.
-		FileManager.bitfield = new boolean[tracker.getTorrentInfo().piece_hashes.length];
-		FileManager.perPieceBitfield = new boolean[numpieces];
-		FileManager.isRequested = new ByteBuffer[numpieces];
-	
-		
 		//Open up a new URL connection.
 		URL url = new URL(makeURL(tracker, "starting"));
 		URLConnection urlc = url.openConnection();
@@ -194,6 +186,7 @@ public class Metadata {
 					}
 					Peer peerToAdd = new Peer(ip, port, peerid, torrentData.piece_hashes.length);
 					tracker.getPeers().add(peerToAdd);
+					//GET APPROVED PEERS
 					if (peerToAdd.getIP().equals("128.6.5.131") || peerToAdd.getIP().equals("128.6.5.130")){
 						FileManager.approvedPeers.add(peerToAdd);
 					}

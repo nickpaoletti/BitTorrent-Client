@@ -28,6 +28,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Map;
 
+import btclient.bencoding.Bencoder2;
+import btclient.bencoding.BencodingException;
+
 
 
 /**
