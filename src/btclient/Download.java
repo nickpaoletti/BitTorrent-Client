@@ -200,7 +200,7 @@ public class Download implements Runnable{
 		}
 	}
 	
-	private static Message makeRequest(Peer designatedPeer, TrackerInfo tracker){ 
+	private static Message makeRequest(Peer designatedPeer, TrackerInfo tracker) throws EOFException{ 
 		System.out.println("I'm going to try to make a request from " + designatedPeer);
         for (int pieceIndex = 0; pieceIndex < FileManager.bitfield.length; pieceIndex++){
         		//System.out.println("Index #" + pieceIndex + " is " + FileManager.bitfield[pieceIndex] + " on the FileManager and on the Peers bitfield it is " + designatedPeer.getBitfield()[pieceIndex]);
@@ -215,8 +215,11 @@ public class Download implements Runnable{
                         }
                 }
         }
+        throw new EOFException();
+        /*
         System.out.println("Nothing to request from " + designatedPeer);
         return null;
+        */
 	}
 	
 	private static Message savePiece(PieceMessage piece, TrackerInfo tracker) throws IOException, NoSuchAlgorithmException{   

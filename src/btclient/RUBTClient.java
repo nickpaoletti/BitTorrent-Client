@@ -80,21 +80,8 @@ class RUBTClient {
 				Download peer = new Download();
 				new Thread(peer).start();
 			}
-			/*
-			Download peerOne = new Download();
-			new Thread(peerOne).start();
 			
-			Download peerTwo = new Download();
-			new Thread(peerTwo).start();
-			
-			Download peerThree = new Download();
-			new Thread(peerThree).start();
-			
-			Download peerFour = new Download();
-			new Thread(peerFour).start();
-			*/
-			
-			//FileManager.makeFile(args[1]);
+			FileManager.storeFileProgress(args[0]);
 		} catch (BencodingException e) {
 			// Throw exception in the case of Bencoding issue
 			System.out.println(e.toString());

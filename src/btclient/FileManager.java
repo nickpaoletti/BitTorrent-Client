@@ -1,6 +1,8 @@
 package btclient;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
@@ -11,28 +13,26 @@ public class FileManager{
 	public static boolean[] bitfield;
 	static Metadata data;
 	static TrackerInfo tracker;
-	//This 2D byte array has x rows, where x is the amount of pieces in the torrent.
-	//This can be found in the TorrentInfo = key_piece_hashes.length
-	//For each row, there is a byte array the size of the length of each piece, in this case 32kB.
-	
-	/*
-	public static byte[][] pieces;
-	*/
+
 	public static boolean[] perPieceBitfield;
 	public static ByteBuffer[] isRequested;
 	public static RandomAccessFile file;
 	public static ArrayList<Peer> approvedPeers;
 	
-	//Merge together the pieces of the 2D byte array to write the File you downloaded.
-	/*
-	public static void makeFile(String filename) throws IOException{
-		File nick = new File(filename);
-		FileOutputStream file = new FileOutputStream(nick);
-		for (int i = 0; i < pieces.length; i ++){
-			file.write(pieces[i]);
+	
+	//File writing code obtained from http://www.roseindia.net/java/beginners/java-write-to-file.shtml
+	public static void storeFileProgress(String filename) throws IOException {
+		FileWriter write = new FileWriter(filename + "PROGRESS");
+		BufferedWriter out = new BufferedWriter(write);
+		for (int i = 0; i < bitfield.length; i++){
+			if (bitfield[i] == true){
+				out.write('1');
+			}
+			else {
+				out.write('0');
+			}
 		}
-		file.close();
+		out.close();
 	}
-	*/
 	
 }
