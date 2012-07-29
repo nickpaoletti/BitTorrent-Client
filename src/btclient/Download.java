@@ -52,7 +52,7 @@ public class Download implements Runnable{
 		
 		//Keep looping until file is completed download. 
 		while (RUBTClient.keepRunning){
-			System.out.println(designatedPeer + " is going through the loop.");
+			//System.out.println(designatedPeer + " is going through the loop.");
 			try {
 				//Grab length prefix and create byte array of that length.
 				Message message = designatedPeer.getNextMessageBlocking();
@@ -64,47 +64,49 @@ public class Download implements Runnable{
 						break;
 					case Message.TYPE_UNCHOKE:
 					{
-						System.out.println("They unchoked me those fools");
+						System.out.println(designatedPeer + " sent unchoke message.");
 						Message temp = makeRequest(designatedPeer, tracker);
 						//If you want something, write a Request.Message message = designatedPeer.getNextMessageBlocking();
 						if (temp != null){
-							System.out.println("I'm going to make a request! THIS IS FUN");
 							designatedPeer.sendMessage(temp);
 						}
 						break;
 					}
 					case Message.TYPE_INTERESTED:{
-						System.out.println("THEY ARE INTERESTED IN  ME!!!");
+						System.out.println(designatedPeer + " is interested in a piece.");
 						designatedPeer.sendMessage(Message.UNCHOKE);
 						break;
 					}
 					case Message.TYPE_UNINTERESTED:
 						break;
 					case Message.TYPE_HAVE: {
+						System.out.println(designatedPeer + " sent a Have Message for Index " + ((HaveMessage)message).getIndex());
 						designatedPeer.sendMessage(analyzeHave((HaveMessage)message, designatedPeer));
 						break;
 					}
 						
 					case Message.TYPE_BITFIELD: {
-						System.out.println("Got a bitfield from em");
+						System.out.println(designatedPeer + " sent a bitfield.");
 						designatedPeer.sendMessage(analyzeBitfield(designatedPeer, (BitfieldMessage)message));
 						break;
 					}
 					case Message.TYPE_REQUEST:
 					{
-						System.out.println("THEY REQUESTED SOMETHING!");
+						System.out.println(designatedPeer + " requested Piece: " + ((RequestMessage)message).getIndex() + " at offset " + 
+								((RequestMessage)message).getOffset());
 						designatedPeer.sendMessage(makePiece((RequestMessage)message));
-						System.out.println("Sent Peer " + designatedPeer + " a piece.");
 						break;
 					}
 					case Message.TYPE_PIECE: {
-						System.out.println("Got a piece from em");
+						System.out.println(designatedPeer + " sent piece at Index #" + ((PieceMessage)message).getIndex() + 
+								" at offset " + ((PieceMessage)message).getOffset());
 						// Decode the piece. Save the file.
 						Message hasmsg = savePiece((PieceMessage) message,
 								tracker);
 						if (hasmsg != null) {
 							// designatedPeer.sendMessage(hasmsg);
 							for (int i = 0; i < FileManager.approvedPeers.size(); i++) {
+								//IF PEERS EXIT, REMOVE THEM FROM APPROVED PEERS!!!!!! YEAH.
 								FileManager.approvedPeers.get(i).sendMessage(hasmsg);
 								System.out.println("Sending a Have Message to peer " + FileManager.approvedPeers.get(i));
 							}
@@ -126,16 +128,18 @@ public class Download implements Runnable{
 				}
 			}
 			catch (EOFException de){
-				System.out.println(de.toString());
 				//Let the tracker know the file is completed downloading, and to stop the download.
 				new URL(data.makeURL(tracker, "completed"));
 				new URL(data.makeURL(tracker, "stopped"));
 				System.out.println("File Complete from" + designatedPeer);
+				FileManager.approvedPeers.remove(designatedPeer);
+				designatedPeer.disconnect();
 				break;
 			}	
 		}
 		//Close input streams. Close socket.
 		
+		FileManager.approvedPeers.remove(designatedPeer);
 		designatedPeer.disconnect();
 		
 	}
