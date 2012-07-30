@@ -72,6 +72,7 @@ class RUBTClient {
 			
 			if (f.exists()){
 				FileManager.readFileProgress(args[1]);
+				FileManager.havePieces = true;  
 			}
 			
 			

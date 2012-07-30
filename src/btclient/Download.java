@@ -47,6 +47,10 @@ public class Download implements Runnable{
 		Peer designatedPeer = findRobsGoodPeer(tracker);
 		designatedPeer.handshake(data.torrentData.info_hash.array(), tracker.getUserPeerId());
 		
+		if (FileManager.havePieces){
+			designatedPeer.sendMessage(makeBitfield());
+		}
+		
 		//Tell the tracker I started downloading.
 		new URL(data.makeURL(tracker, "started"));
 		
@@ -303,5 +307,14 @@ public class Download implements Runnable{
             } 
         }
         return null;
+	}
+	
+	private static BitfieldMessage makeBitfield(){
+		boolean[] bitfieldToSend = new boolean[FileManager.bitfield.length];
+		for (int i = 0; i < FileManager.bitfield.length; i++){
+			bitfieldToSend[i] = FileManager.bitfield[i];
+		}
+
+		return new BitfieldMessage(bitfieldToSend);	
 	}
 }

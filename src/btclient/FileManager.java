@@ -27,6 +27,7 @@ public class FileManager{
 	public static ByteBuffer[] isRequested;
 	public static RandomAccessFile file;
 	public static ArrayList<Peer> approvedPeers;
+	public static boolean havePieces;
 	
 	//File writing code obtained from http://www.roseindia.net/java/beginners/java-write-to-file.shtml
 	public static void storeFileProgress(String filename) throws IOException {
