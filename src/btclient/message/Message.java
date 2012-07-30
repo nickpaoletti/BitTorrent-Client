@@ -132,7 +132,31 @@ public class Message {
 				dos.writeInt(((HaveMessage)msg).getIndex());
 				break;
 			case TYPE_BITFIELD: {
-				//TO DO
+				/* CODE TAKEN FROM ROB MOORE 
+				 * From Java Programming Sakai site, https://sakai.rutgers.edu/portal/site/e07619c5-a492-4ebe-8771-179dfe450ae4/page/0a7200cf-0538-479a-a197-8d398c438484
+				 * Thanks again, Rob. :) <-- Check that smiley face.
+				 */
+				
+				int length = ((BitfieldMessage)msg).getBitfield().length / 8;
+				int mod = ((BitfieldMessage)msg).getBitfield().length % 8;
+				if(mod != 0){
+					++length;
+				}
+				byte[] byteBooleanArray = new byte[length];
+				int boolIndex = 0;
+				for (int byteIndex = 0; byteIndex < byteBooleanArray.length; ++byteIndex) {
+					for (int bitIndex = 7; bitIndex >= 0; --bitIndex) {
+						// Another bad idea
+						if (boolIndex >= ((BitfieldMessage)msg).getBitfield().length) {
+							break;
+						}
+						if (((BitfieldMessage)msg).getBitfield()[boolIndex++]) {
+							byteBooleanArray[byteIndex] |= (byte) (1 << bitIndex);
+						}
+					}
+				}
+
+				dos.write(byteBooleanArray);
 				break;
 			}
 			case TYPE_REQUEST: {
@@ -196,4 +220,7 @@ public class Message {
 		return type;
 	}
 
+	public int getLength() {
+		return length;
+	}
 }

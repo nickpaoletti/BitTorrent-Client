@@ -47,12 +47,14 @@ public class Download implements Runnable{
 		Peer designatedPeer = findRobsGoodPeer(tracker);
 		designatedPeer.handshake(data.torrentData.info_hash.array(), tracker.getUserPeerId());
 		
+		//Tell the tracker I started downloading.
+		new URL(data.makeURL(tracker, "started"));
+		
+		
 		if (FileManager.havePieces){
 			designatedPeer.sendMessage(makeBitfield());
 		}
 		
-		//Tell the tracker I started downloading.
-		new URL(data.makeURL(tracker, "started"));
 		
 		//Keep looping until file is completed download. 
 		while (RUBTClient.keepRunning){
@@ -88,7 +90,6 @@ public class Download implements Runnable{
 						designatedPeer.sendMessage(analyzeHave((HaveMessage)message, designatedPeer));
 						break;
 					}
-						
 					case Message.TYPE_BITFIELD: {
 						System.out.println(designatedPeer + " sent a bitfield.");
 						designatedPeer.sendMessage(analyzeBitfield(designatedPeer, (BitfieldMessage)message));
@@ -98,7 +99,9 @@ public class Download implements Runnable{
 					{
 						System.out.println(designatedPeer + " requested Piece: " + ((RequestMessage)message).getIndex() + " at offset " + 
 								((RequestMessage)message).getOffset());
-						designatedPeer.sendMessage(makePiece((RequestMessage)message));
+						PieceMessage pm = makePiece((RequestMessage)message);
+						System.out.println("Sending " + designatedPeer + " a piece at Index " + pm.getIndex() + " at offset " + pm.getOffset());
+						designatedPeer.sendMessage(pm);
 						break;
 					}
 					case Message.TYPE_PIECE: {
@@ -128,18 +131,23 @@ public class Download implements Runnable{
 					}
 				}
 				else {
-					//Keep alive. Do nothing.
+					//I should have a keep alive message?
 				}
 			}
-			catch (EOFException de){
+			catch (EOFException eof){
 				//Let the tracker know the file is completed downloading, and to stop the download.
 				new URL(data.makeURL(tracker, "completed"));
 				new URL(data.makeURL(tracker, "stopped"));
-				System.out.println("File Complete from" + designatedPeer);
+				System.out.println("Peer " + designatedPeer + " has closed their stream.");
 				FileManager.approvedPeers.remove(designatedPeer);
 				designatedPeer.disconnect();
 				break;
-			}	
+			}
+			catch (SocketException se){
+				System.out.println("Error with Peer " + designatedPeer);
+				FileManager.approvedPeers.remove(designatedPeer);
+				designatedPeer.disconnect();
+			}
 		}
 		//Close input streams. Close socket.
 		
@@ -149,7 +157,7 @@ public class Download implements Runnable{
 	}
 	
 	
-	private static synchronized Message makePiece(RequestMessage request) throws IOException {
+	private static synchronized PieceMessage makePiece(RequestMessage request) throws IOException {
 		if (FileManager.bitfield[request.getIndex()] == true
 				&& !(request.getPieceLength() > 131072)) {
 			byte[] piece = new byte[request.getPieceLength()];
@@ -157,7 +165,7 @@ public class Download implements Runnable{
 			FileManager.file.readFully(piece);
 			return new PieceMessage(request.getIndex(), request.getOffset(), piece);
 		}
-		// If this isn't true, you're in trouble.
+		System.out.println("NOT GOOD!!!!!!");
 		return null;
 	}
 	
@@ -263,8 +271,7 @@ public class Download implements Runnable{
         FileManager.file.seek((piece.getIndex()*(tracker.getTorrentInfo().piece_length)+piece.getOffset()));
         FileManager.file.write(piece.getPieceData());
 
-        //[(index * (tracker.getTorrentInfo().piece_length)/(16384))] = filepiece;
-        
+    
         FileManager.bitfield[piece.getIndex()] = true;
         for (int pieceCount = 0; pieceCount < (tracker.getTorrentInfo().piece_length)/(16384); pieceCount++){
                 //If we're at the final step, we can't use the bottom statement which will cause OutOfBounds issues.
@@ -274,39 +281,52 @@ public class Download implements Runnable{
                         }
                 }
                 catch (ArrayIndexOutOfBoundsException aioobe) {
-                    //Do nothing. These pieces are pointless.
+                    //Do nothing because this is the final piece, where there are not 12 subpieces.
                 }
-        
         }
         
         //If you downloaded the whole piece, check the SHA-Hash. This still really needs to be updated.
         if (FileManager.bitfield[piece.getIndex()] == true){
         	System.out.println("Full piece downloaded. ");
-            
-            byte[] pieceCheck = new byte[(tracker.getTorrentInfo().piece_length)];
+        	
+        	//Take the piece of File to be SHA-1 Hashed.
+        	byte[] pieceCheck = new byte[(tracker.getTorrentInfo().piece_length)];
             FileManager.file.seek(piece.getIndex() * (tracker.getTorrentInfo().piece_length));
             FileManager.file.readFully(pieceCheck);
-            MessageDigest digest = MessageDigest.getInstance("SHA-1");
-    		digest.update(pieceCheck);
-    		byte[] shahash = digest.digest();
-
-    		System.out.println("Sha hash of downloaded piece:");
-    		ToolKit.printString(shahash, false, 0);
-    		System.out.println("Sha has h of existing piece:");
-    		ToolKit.printString(tracker.getTorrentInfo().piece_hashes[piece.getIndex()],
-    				false, 0);
-
-    		// Verify the SHA-1 Hash of the downloaded piece.
-    		if (!Arrays.equals(shahash,
-    				tracker.getTorrentInfo().piece_hashes[piece.getIndex()].array())) {
-    			System.out.println("Hash pieces don't match. Deleteing piece.");
-    		}
-            
+        	
+        	FileManager.bitfield[piece.getIndex()] = shaHash(pieceCheck, tracker.getTorrentInfo().piece_hashes[piece.getIndex()].array());
+        	
             if (FileManager.bitfield[piece.getIndex()] == true){
+            	System.out.println("SHA-Hash successful.");
             	return new HaveMessage(piece.getIndex());
-            } 
+            }
+            else {
+            	System.out.println("SHA-Hash failed.");
+            	//Undownload everything. Scary.
+                for (int pieceCount = 0; pieceCount < (tracker.getTorrentInfo().piece_length)/(16384); pieceCount++){
+                    //If we're at the final step, we can't use the bottom statement which will cause OutOfBounds issues.
+                    try {
+                    	FileManager.perPieceBitfield[piece.getIndex() * (tracker.getTorrentInfo().piece_length)/(16384) + pieceCount] = false;
+                    }
+                    catch (ArrayIndexOutOfBoundsException aioobe) {
+                        //Do nothing because this is the final piece, where there are not 12 subpieces.
+                    }
+                }
+            }
         }
         return null;
+	}
+	
+	public static boolean shaHash(byte[] piece, byte[] compare) throws NoSuchAlgorithmException{
+        MessageDigest digest = MessageDigest.getInstance("SHA-1");
+		digest.update(piece);
+		byte[] shahash = digest.digest();
+
+		// Verify the SHA-1 Hash of the downloaded piece.
+		if (!Arrays.equals(shahash, compare)) {
+			return false;
+		}
+		return true;
 	}
 	
 	private static BitfieldMessage makeBitfield(){
@@ -314,7 +334,7 @@ public class Download implements Runnable{
 		for (int i = 0; i < FileManager.bitfield.length; i++){
 			bitfieldToSend[i] = FileManager.bitfield[i];
 		}
-
-		return new BitfieldMessage(bitfieldToSend);	
+		BitfieldMessage bfmsg = new BitfieldMessage(bitfieldToSend);
+		return bfmsg;
 	}
 }

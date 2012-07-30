@@ -69,16 +69,15 @@ class RUBTClient {
 			FileManager.initializeFields(data);
 			//Code obtained partially from here: http://www.java2s.com/Code/Java/File-Input-Output/Appendingdatatoexistingfile.htm
 			FileManager.file = new RandomAccessFile(f, "rw");
+			FileManager.data = data;
 			
-			if (f.exists()){
+			if (f.exists() && new File(args[1].substring(0, args[1].lastIndexOf(".mp3")) + "PROGRESS.txt").exists()){
 				FileManager.readFileProgress(args[1]);
-				FileManager.havePieces = true;  
 			}
-			
 			
 			tracker = data.httpGetRequest();
 			FileManager.tracker = tracker;
-			FileManager.data = data;
+			
 			
 			ArrayList<Thread> peerThreads = new ArrayList<Thread>();
 			for (int i = 0; i < FileManager.approvedPeers.size(); i++){

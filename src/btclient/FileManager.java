@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Queue;
@@ -45,12 +46,24 @@ public class FileManager{
 		write.close();
 	}
 	
-	public static void readFileProgress(String filename) throws IOException {
+	public static void readFileProgress(String filename) throws IOException, NoSuchAlgorithmException {
+		FileManager.havePieces = true;
 		FileInputStream fileRead = new FileInputStream(new File(filename.substring(0, filename.lastIndexOf(".mp3")) + "PROGRESS.txt"));
 		int indexCounter = 0;
 		while(fileRead.available() > 0){
 			if((char)fileRead.read() == '1'){
 				bitfield[indexCounter] = true;
+				
+				//MUST FIX HOW I HANDLE METADATA, TRACKER INFO, ETC.
+				
+				/*
+				//Verify each piece.
+				byte[] pieceCheck = new byte[data.torrentData.piece_length];
+	            FileManager.file.seek(indexCounter * (data.torrentData.piece_length));
+	            FileManager.file.readFully(pieceCheck);
+	            
+	            FileManager.bitfield[indexCounter] = Download.shaHash(pieceCheck, data.torrentData.piece_hashes[indexCounter].array());
+	            */
 			}
 			else {
 				bitfield[indexCounter] = false;
@@ -58,7 +71,7 @@ public class FileManager{
 			indexCounter++;
 		}
 		fileRead.close();
-		//TO DO: For each piece, validate. Ya feel me? And then make a tracker announce.
+
 	}
 	
 	public static void initializeFields(Metadata data){
