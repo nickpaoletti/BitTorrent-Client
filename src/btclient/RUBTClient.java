@@ -1,7 +1,6 @@
 package btclient;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Scanner;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -55,8 +54,7 @@ class RUBTClient {
 		TrackerInfo tracker = null;
 		if (args.length != 2) {
 			// Quit if program arguments are incorrect.
-			System.out
-					.println("Correct Usage: java RUBTClient [torretfile].torrent [outputfilename]");
+			System.out.println("Correct Usage: java RUBTClient [torretfile].torrent [outputfilename]");
 			return;
 		}
 		try {
@@ -76,6 +74,8 @@ class RUBTClient {
 			tracker = Metadata.httpGetRequest(FileManager.info);
 			FileManager.tracker = tracker;
 			
+			System.out.println("Type q in the command line to quit");
+			Thread.sleep(2000);
 			
 			ArrayList<Thread> peerThreads = new ArrayList<Thread>();
 			for (int i = 0; i < FileManager.approvedPeers.size(); i++){
