@@ -43,12 +43,12 @@ public class Download implements Runnable{
 	
 	public void downloadFile() throws Exception{
 		TrackerInfo tracker = FileManager.tracker;
-		Metadata data = FileManager.data;
-		Peer designatedPeer = findRobsGoodPeer(tracker);
-		designatedPeer.handshake(data.torrentData.info_hash.array(), tracker.getUserPeerId());
+		TorrentInfo info = FileManager.info;
+		Peer designatedPeer = findApprovedPeers(tracker);
+		designatedPeer.handshake(FileManager.info.info_hash.array(), tracker.getUserPeerId());
 		
 		//Tell the tracker I started downloading.
-		new URL(data.makeURL(tracker, "started"));
+		new URL(Metadata.makeURL(tracker, info, "started"));
 		
 		
 		if (FileManager.havePieces){
@@ -136,8 +136,8 @@ public class Download implements Runnable{
 			}
 			catch (EOFException eof){
 				//Let the tracker know the file is completed downloading, and to stop the download.
-				new URL(data.makeURL(tracker, "completed"));
-				new URL(data.makeURL(tracker, "stopped"));
+				new URL(Metadata.makeURL(tracker, info, "completed"));
+				new URL(Metadata.makeURL(tracker, info, "stopped"));
 				System.out.println("Peer " + designatedPeer + " has closed their stream.");
 				FileManager.approvedPeers.remove(designatedPeer);
 				designatedPeer.disconnect();
@@ -190,7 +190,7 @@ public class Download implements Runnable{
 	/*
 	 * Returns the peer with the peer that matches the IP address request for the project.
 	 */
-	private static Peer findRobsGoodPeer(TrackerInfo tracker) throws Exception{
+	private static Peer findApprovedPeers(TrackerInfo tracker) throws Exception{
 		System.out.println(tracker.getPeers());
 		Peer designatedPeer = null;
 		//Look through all peers

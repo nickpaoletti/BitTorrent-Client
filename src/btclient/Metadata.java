@@ -25,12 +25,9 @@ import btclient.message.HaveMessage;
 public class Metadata {
 	private static final Logger log = Logger.getLogger(Metadata.class.getName());
 	
-	public static TorrentInfo torrentData;
+	//public static TorrentInfo torrentData;
 	
-	public Metadata(File torrent) throws IOException, BencodingException{
-		
-		log.fine("Reading metadata from " + torrent);
-		
+	public static TorrentInfo makeTorrentInfo (File torrent) throws IOException, BencodingException{
 		//Learned how to do this from http://www.exampledepot.com/egs/java.io/file2bytearray.html
 		InputStream fileRead = new FileInputStream(torrent);
 		
@@ -49,12 +46,11 @@ public class Metadata {
 	    din.close();
 	    
 	    //Return byte array.
-		torrentData = new TorrentInfo(torrentBytes);
-		log.config("Successfully metadata file " + torrent);
+	    return new TorrentInfo(torrentBytes);
 	}
-	
+
 	//Takes in a ByteBuffer in as its argument and returns a String of the escaped info hash.
-	private String returnInfoHash(ByteBuffer infohash){
+	private static String returnInfoHash(ByteBuffer infohash){
 		//Turn the ByteBuffer into a Byte Array
 		byte[] temp = infohash.array();
 		
@@ -67,7 +63,7 @@ public class Metadata {
 	}
 	
 	//Create a randomly generated 20 digit Peer ID with prefix "SWAG" to denote the client.
-	private byte[] makePeerID(){
+	private static byte[] makePeerID(){
 		byte[] peerid = new byte[20];
 		peerid[0] = 'S';
 		peerid[1] = 'W';
@@ -84,7 +80,7 @@ public class Metadata {
 	}
 	
 	//Creates announce URLs based on the state of the program
-	public String makeURL(TrackerInfo tracker, String state){
+	public static String makeURL(TrackerInfo tracker, TorrentInfo torrentData, String state){
 		String url = "";
 		//Used for first announce and the subsequent HTTP GET request.
 		if (state.equals("starting")){
@@ -118,7 +114,7 @@ public class Metadata {
 	 * taking the bencoded information obtained from it, decoding it, and storing it in an easier
 	 * to understand TrackerInfo object. 
 	 */
-	public TrackerInfo httpGetRequest() throws MalformedURLException, IOException, BencodingException{
+	public static TrackerInfo httpGetRequest(TorrentInfo torrentData) throws MalformedURLException, IOException, BencodingException{
 		//Create new TrackerInfo class
 		TrackerInfo tracker = new TrackerInfo();
 		//Pass in the torrentData to this new tracker. A bad hack...
@@ -128,7 +124,7 @@ public class Metadata {
 		tracker.setUserPeerId(makePeerID());
 		
 		//Open up a new URL connection.
-		URL url = new URL(makeURL(tracker, "starting"));
+		URL url = new URL(makeURL(tracker, torrentData, "starting"));
 		URLConnection urlc = url.openConnection();
 		
 		//Obtain the bencoded dictionary obtained from making the HTTP Request.

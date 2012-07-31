@@ -52,7 +52,7 @@ class RUBTClient {
 //	}
 
 	public static void main(String[] args) {
-		Metadata data = null;
+		TorrentInfo info = null;
 		TrackerInfo tracker = null;
 		if (args.length != 2) {
 			// Quit if program arguments are incorrect.
@@ -64,18 +64,17 @@ class RUBTClient {
 			// Convert the .torrent file into a TrackerInfo object, and download
 			// the file using
 			// the given tracker info.
-			data = new Metadata(new File(args[0]));
+			FileManager.info = Metadata.makeTorrentInfo(new File(args[0]));
 			File f = new File(args[1]);
-			FileManager.initializeFields(data);
+			FileManager.initializeFields();
 			//Code obtained partially from here: http://www.java2s.com/Code/Java/File-Input-Output/Appendingdatatoexistingfile.htm
 			FileManager.file = new RandomAccessFile(f, "rw");
-			FileManager.data = data;
 			
 			if (f.exists() && new File(args[1].substring(0, args[1].lastIndexOf(".mp3")) + "PROGRESS.txt").exists()){
 				FileManager.readFileProgress(args[1]);
 			}
 			
-			tracker = data.httpGetRequest();
+			tracker = Metadata.httpGetRequest(FileManager.info);
 			FileManager.tracker = tracker;
 			
 			

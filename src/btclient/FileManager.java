@@ -21,8 +21,8 @@ import btclient.message.HaveMessage;
 public class FileManager{
 	//This array keeps track of how many pieces you have downloaded:
 	public static boolean[] bitfield;
-	static Metadata data;
-	static TrackerInfo tracker;
+	public static TorrentInfo info;
+	public static TrackerInfo tracker;
 
 	public static boolean[] perPieceBitfield;
 	public static ByteBuffer[] isRequested;
@@ -74,9 +74,9 @@ public class FileManager{
 
 	}
 	
-	public static void initializeFields(Metadata data){
-		int numpieces = (int) Math.ceil(data.torrentData.file_length/16384);
-		FileManager.bitfield = new boolean[data.torrentData.piece_hashes.length];
+	public static void initializeFields(){
+		int numpieces = (int) Math.ceil(info.file_length/16384);
+		FileManager.bitfield = new boolean[info.piece_hashes.length];
 		FileManager.perPieceBitfield = new boolean[numpieces];
 		FileManager.isRequested = new ByteBuffer[numpieces];
 	}
