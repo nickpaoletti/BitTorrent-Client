@@ -52,7 +52,6 @@ class RUBTClient {
 //	}
 
 	public static void main(String[] args) {
-		TorrentInfo info = null;
 		TrackerInfo tracker = null;
 		if (args.length != 2) {
 			// Quit if program arguments are incorrect.
@@ -85,6 +84,9 @@ class RUBTClient {
 				peerThreads.get(i).start();
 			}
 		    
+			Runnable ta = new TrackerAnnounce();
+			Thread trackerthread = new Thread(ta);
+			trackerthread.start();
 			
 			BufferedReader quitStatus = new BufferedReader(new InputStreamReader(System.in));
 			String input = quitStatus.readLine();
@@ -95,6 +97,7 @@ class RUBTClient {
 			}
 			
 			keepRunning = false; 
+			trackerthread.interrupt();
 			FileManager.storeFileProgress(args[1]);
 		} catch (BencodingException e) {
 			// Throw exception in the case of Bencoding issue

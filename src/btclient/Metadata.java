@@ -50,7 +50,7 @@ public class Metadata {
 	}
 
 	//Takes in a ByteBuffer in as its argument and returns a String of the escaped info hash.
-	private static String returnInfoHash(ByteBuffer infohash){
+	public static String returnInfoHash(ByteBuffer infohash){
 		//Turn the ByteBuffer into a Byte Array
 		byte[] temp = infohash.array();
 		
@@ -80,35 +80,7 @@ public class Metadata {
 	}
 	
 	//Creates announce URLs based on the state of the program
-	public static String makeURL(TrackerInfo tracker, TorrentInfo torrentData, String state){
-		String url = "";
-		//Used for first announce and the subsequent HTTP GET request.
-		if (state.equals("starting")){
-			url = url + torrentData.announce_url +  "?info_hash=" + returnInfoHash(torrentData.info_hash)
-					+ "&peer_id="+ tracker.getUserPeerId() + "&port=6881" + "&uploaded=0" + "&downloaded=0" + 
-					"&left=" + torrentData.file_length;
-		}
-		//Used when the download is started.
-		else if (state.equals("started")){
-			url = url + torrentData.announce_url +  "?info_hash=" + returnInfoHash(torrentData.info_hash)
-					+ "&peer_id="+ tracker.getUserPeerId() + "&port=6881" + "&uploaded=0" + "&downloaded=0" + 
-					"&left=" + torrentData.file_length + "&event=started";
-		}
-		//Use right when the download completes
-		else if (state.equals("completed")){
-			url = url + torrentData.announce_url +  "?info_hash=" + returnInfoHash(torrentData.info_hash)
-				+ "&peer_id="+ tracker.getUserPeerId() + "&port=6881" + "&uploaded=0" + "&downloaded=0" + 
-				"&left=" + torrentData.file_length + "&event=completed";
-		}
-		//Use right after the download completes and complete notice is sent.
-		else if (state.equals("stopped")){
-			url = url + torrentData.announce_url +  "?info_hash=" + returnInfoHash(torrentData.info_hash)
-				+ "&peer_id="+ tracker.getUserPeerId() + "&port=6881" + "&uploaded=0" + "&downloaded=0" + 
-				"&left=" + torrentData.file_length + "&event=stopped";
-		}
-		return url;
-		
-	}
+	
 	
 	/* This method is responsible for establishing the HTTP GET request, but more importantly,
 	 * taking the bencoded information obtained from it, decoding it, and storing it in an easier
@@ -124,7 +96,9 @@ public class Metadata {
 		tracker.setUserPeerId(makePeerID());
 		
 		//Open up a new URL connection.
-		URL url = new URL(makeURL(tracker, torrentData, "starting"));
+		URL url = new URL(torrentData.announce_url +  "?info_hash=" + returnInfoHash(torrentData.info_hash)
+				+ "&peer_id="+ tracker.getUserPeerId() + "&port=6881" + "&uploaded=0" + "&downloaded=0" + 
+				"&left=" + torrentData.file_length);
 		URLConnection urlc = url.openConnection();
 		
 		//Obtain the bencoded dictionary obtained from making the HTTP Request.

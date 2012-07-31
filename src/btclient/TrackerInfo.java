@@ -72,5 +72,31 @@ public class TrackerInfo{
 	public ArrayList<Peer> getPeers() {
 		return mPeers;
 	}
+	
+	public String makeURL(TorrentInfo torrentData, String state){
+		String url = "";
+		//Used for first announce and the subsequent HTTP GET request.
+		if (state.equals("started")){
+			url = url + torrentData.announce_url +  "?info_hash=" + Metadata.returnInfoHash(torrentData.info_hash)
+					+ "&peer_id="+ userPeerId + "&port=6881" + "&uploaded=" + FileManager.uploaded + "&downloaded=" + FileManager.downloaded + 
+					"&left=" + (torrentData.file_length - FileManager.downloaded) + "&event=started";
+		}
+		//Use right when the download completes
+		else if (state.equals("completed")){
+			url = url + torrentData.announce_url +  "?info_hash=" + Metadata.returnInfoHash(torrentData.info_hash)
+			+ "&peer_id="+ userPeerId + "&port=6881" + "&uploaded=" + FileManager.uploaded + "&downloaded=" + FileManager.downloaded + 
+			"&left=" + (torrentData.file_length - FileManager.downloaded) + "&event=completed";
+		}
+		//Use right after the download completes and complete notice is sent.
+		else if (state.equals("stopped")){
+			url = url + torrentData.announce_url +  "?info_hash=" + Metadata.returnInfoHash(torrentData.info_hash)
+			+ "&peer_id="+ userPeerId + "&port=6881" + "&uploaded=" + FileManager.uploaded + "&downloaded=" + FileManager.downloaded + 
+			"&left=" + (torrentData.file_length - FileManager.downloaded) + "&event=stopped";
+		}
+		return url;
+		
+	}
+	
+	
 
 }

@@ -48,7 +48,7 @@ public class Download implements Runnable{
 		designatedPeer.handshake(FileManager.info.info_hash.array(), tracker.getUserPeerId());
 		
 		//Tell the tracker I started downloading.
-		new URL(Metadata.makeURL(tracker, info, "started"));
+		new URL(FileManager.tracker.makeURL(info, "started"));
 		
 		
 		if (FileManager.havePieces){
@@ -136,8 +136,8 @@ public class Download implements Runnable{
 			}
 			catch (EOFException eof){
 				//Let the tracker know the file is completed downloading, and to stop the download.
-				new URL(Metadata.makeURL(tracker, info, "completed"));
-				new URL(Metadata.makeURL(tracker, info, "stopped"));
+				new URL(FileManager.tracker.makeURL(info, "completed"));
+				new URL(FileManager.tracker.makeURL(info, "stopped"));
 				System.out.println("Peer " + designatedPeer + " has closed their stream.");
 				FileManager.approvedPeers.remove(designatedPeer);
 				designatedPeer.disconnect();
@@ -163,6 +163,7 @@ public class Download implements Runnable{
 			byte[] piece = new byte[request.getPieceLength()];
 			FileManager.file.seek((request.getIndex() * (FileManager.tracker.getTorrentInfo().piece_length) + request.getOffset()));
 			FileManager.file.readFully(piece);
+			FileManager.addUploaded(request.getPieceLength());
 			return new PieceMessage(request.getIndex(), request.getOffset(), piece);
 		}
 		System.out.println("NOT GOOD!!!!!!");
@@ -271,6 +272,7 @@ public class Download implements Runnable{
         FileManager.file.seek((piece.getIndex()*(tracker.getTorrentInfo().piece_length)+piece.getOffset()));
         FileManager.file.write(piece.getPieceData());
 
+        FileManager.addDownloaded(piece.getPieceData().length);
     
         FileManager.bitfield[piece.getIndex()] = true;
         for (int pieceCount = 0; pieceCount < (tracker.getTorrentInfo().piece_length)/(16384); pieceCount++){
