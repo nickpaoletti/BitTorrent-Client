@@ -34,6 +34,7 @@ public class Download implements Runnable{
 	
 	public void run(){
 		try {
+			//Initiate peer connection.
 			downloadFile();
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -44,13 +45,14 @@ public class Download implements Runnable{
 	public void downloadFile() throws Exception{
 		TrackerInfo tracker = FileManager.tracker;
 		TorrentInfo info = FileManager.info;
+		//Find the first approved peer that I have not connected to yet.
 		Peer designatedPeer = findApprovedPeers(tracker);
 		designatedPeer.handshake(FileManager.info.info_hash.array(), tracker.getUserPeerId());
 		
 		//Tell the tracker I started downloading.
 		new URL(FileManager.tracker.makeURL(info, "started"));
 		
-		
+		//If I am resuming the download, send the peer a bitfield of what I have.
 		if (FileManager.havePieces){
 			designatedPeer.sendMessage(makeBitfield());
 		}
@@ -58,9 +60,8 @@ public class Download implements Runnable{
 		
 		//Keep looping until file is completed download. 
 		while (RUBTClient.keepRunning){
-			//System.out.println(designatedPeer + " is going through the loop.");
 			try {
-				//Grab length prefix and create byte array of that length.
+				//Read a message from the input stream.
 				Message message = designatedPeer.getNextMessageBlocking();
 				
 				//If the message is not a keep alive, decode it, then send a corresponding message.
@@ -68,33 +69,39 @@ public class Download implements Runnable{
 					switch(message.getType()){
 					case Message.TYPE_CHOKE:
 						break;
+					//If the peer unchokes me, I can now make a request.
 					case Message.TYPE_UNCHOKE:
 					{
 						System.out.println(designatedPeer + " sent unchoke message.");
 						Message temp = makeRequest(designatedPeer, tracker);
-						//If you want something, write a Request.Message message = designatedPeer.getNextMessageBlocking();
+						//temp will not be null if there is a piece I want. In this event, send a request.
 						if (temp != null){
 							designatedPeer.sendMessage(temp);
 						}
 						break;
 					}
+					//If a peer is interested in one of my pieces, unchoke them.
 					case Message.TYPE_INTERESTED:{
 						System.out.println(designatedPeer + " is interested in a piece.");
 						designatedPeer.sendMessage(Message.UNCHOKE);
 						break;
 					}
+					//If a peer is not interested in one of pieces, do nothing for now.
 					case Message.TYPE_UNINTERESTED:
 						break;
+					//If a peer sends a have message, mark in their bitfield that they have it.
 					case Message.TYPE_HAVE: {
 						System.out.println(designatedPeer + " sent a Have Message for Index " + ((HaveMessage)message).getIndex());
 						designatedPeer.sendMessage(analyzeHave((HaveMessage)message, designatedPeer));
 						break;
 					}
+					//If a peer sends a bitfield, modify their bitfield to correspond to the one sent.
 					case Message.TYPE_BITFIELD: {
 						System.out.println(designatedPeer + " sent a bitfield.");
 						designatedPeer.sendMessage(analyzeBitfield(designatedPeer, (BitfieldMessage)message));
 						break;
 					}
+					//If the peer sends a request, give them the piece they requested.
 					case Message.TYPE_REQUEST:
 					{
 						System.out.println(designatedPeer + " requested Piece: " + ((RequestMessage)message).getIndex() + " at offset " + 
@@ -104,22 +111,21 @@ public class Download implements Runnable{
 						designatedPeer.sendMessage(pm);
 						break;
 					}
+					//If the peer sends you a subpiece, save the piece and notify ALL peers you are connected to you have it if you have completed the whole piece..
 					case Message.TYPE_PIECE: {
 						System.out.println(designatedPeer + " sent piece at Index #" + ((PieceMessage)message).getIndex() + 
 								" at offset " + ((PieceMessage)message).getOffset());
 						// Decode the piece. Save the file.
-						Message hasmsg = savePiece((PieceMessage) message,
-								tracker);
+						Message hasmsg = savePiece((PieceMessage) message,tracker);
+						//Go through your list of peers you are connected to, and let them all know you have that piece.
 						if (hasmsg != null) {
-							// designatedPeer.sendMessage(hasmsg);
 							for (int i = 0; i < FileManager.approvedPeers.size(); i++) {
-								//IF PEERS EXIT, REMOVE THEM FROM APPROVED PEERS!!!!!! YEAH.
 								FileManager.approvedPeers.get(i).sendMessage(hasmsg);
 								System.out.println("Sending a Have Message to peer " + FileManager.approvedPeers.get(i));
 							}
 
 						}
-
+						//Upon receiving a piece, request a new one.
 						Message reqmsg = makeRequest(designatedPeer, tracker);
 						if (reqmsg != null) {
 							designatedPeer.sendMessage(reqmsg);
@@ -127,29 +133,34 @@ public class Download implements Runnable{
 						break;
 					}	
 					default:
+						//Unrecognized message type sent.
 						log.severe("Unrecognized message type: " + ('0'+message.getType()));
 					}
 				}
 				else {
-					//I should have a keep alive message?
+					//Peer has sent a keep alive - do nothing.
 				}
 			}
+			//In this event, the Socket has been closed, usually cleanly as you are no longer
+			//downloading from the peer and they have no interest in any of your pieces.
 			catch (EOFException eof){
-				//Let the tracker know the file is completed downloading, and to stop the download.
+				//Let the tracker know you are done. 
 				new URL(FileManager.tracker.makeURL(info, "completed"));
 				new URL(FileManager.tracker.makeURL(info, "stopped"));
 				System.out.println("Peer " + designatedPeer + " has closed their stream.");
+				//Remove this peer from the list of peers we are downloading from, and disconnect them.
 				FileManager.approvedPeers.remove(designatedPeer);
 				designatedPeer.disconnect();
 				break;
 			}
+			//This peer threw and error, so disconnect them.
 			catch (SocketException se){
 				System.out.println("Error with Peer " + designatedPeer);
 				FileManager.approvedPeers.remove(designatedPeer);
 				designatedPeer.disconnect();
 			}
 		}
-		//Close input streams. Close socket.
+		//On the event the program is exited, close input streams and close socket.
 		
 		FileManager.approvedPeers.remove(designatedPeer);
 		designatedPeer.disconnect();
@@ -158,28 +169,31 @@ public class Download implements Runnable{
 	
 	
 	private static synchronized PieceMessage makePiece(RequestMessage request) throws IOException {
+		//Make sure the peer sent a piece under 128kB. Otherwise you have a protocol exception.
 		if (FileManager.bitfield[request.getIndex()] == true
 				&& !(request.getPieceLength() > 131072)) {
+			//Seek to the position in your file for the piece you have, grab the bytes, and send them.
 			byte[] piece = new byte[request.getPieceLength()];
 			FileManager.file.seek((request.getIndex() * (FileManager.tracker.getTorrentInfo().piece_length) + request.getOffset()));
 			FileManager.file.readFully(piece);
 			FileManager.addUploaded(request.getPieceLength());
 			return new PieceMessage(request.getIndex(), request.getOffset(), piece);
 		}
-		System.out.println("NOT GOOD!!!!!!");
-		return null;
+		throw new IOException("A peer requested too large a piece.");
 	}
 	
 		
 	private static Message analyzeHave(HaveMessage have, Peer designatedPeer){
 		boolean interested = false;
+		//Mark in the peers bitfield they have the piece.
 		designatedPeer.changeBitfield(have.getIndex(), true);
+		//Look through your bitfield. If you do not have this piece, let the peer know you are interested in it.
 		for (int i = 0; i < FileManager.bitfield.length; i++){
 			if (FileManager.bitfield[have.getIndex()] == false){
 				interested = true;
 			}
 		}
-		
+		//If you aren't interested in the piece, say you are uninterested. If you are interested, say you are.
 		if (interested == false){
 			return Message.UNINTERESTED;
 		}
