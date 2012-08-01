@@ -2,6 +2,7 @@ package btclient;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -128,6 +129,9 @@ public class Peer {
 
 	public synchronized void sendMessage(Message m) throws IOException {
 		Message.encode(m, this.out);
+		if (RUBTClient.keepRunning == false){
+			throw new EOFException("Program closed");
+		}
 	}
 
 	public static final byte[] HANDSHAKE_TEMPLATE = new byte[] { 19, 'B', 'i',

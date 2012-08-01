@@ -33,28 +33,42 @@ public class Download implements Runnable{
 	 */
 	
 	public void run(){
-		try {
-			//Initiate peer connection.
-			downloadFile();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	public void downloadFile() throws Exception{
 		TrackerInfo tracker = FileManager.tracker;
 		TorrentInfo info = FileManager.info;
 		//Find the first approved peer that I have not connected to yet.
-		Peer designatedPeer = findApprovedPeers(tracker);
-		designatedPeer.handshake(FileManager.info.info_hash.array(), tracker.getUserPeerId());
+		Peer designatedPeer;
+		
+		designatedPeer = null;
+		try {
+			designatedPeer = findApprovedPeers(tracker);
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+
+		try {
+			designatedPeer.handshake(FileManager.info.info_hash.array(), tracker.getUserPeerId());
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		//Tell the tracker I started downloading.
-		new URL(FileManager.tracker.makeURL(info, "started"));
+		try {
+			new URL(FileManager.tracker.makeURL(info, "started"));
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		//If I am resuming the download, send the peer a bitfield of what I have.
 		if (FileManager.havePieces){
-			designatedPeer.sendMessage(makeBitfield());
+			try {
+				designatedPeer.sendMessage(makeBitfield());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 		
@@ -62,8 +76,10 @@ public class Download implements Runnable{
 		while (RUBTClient.keepRunning){
 			try {
 				//Read a message from the input stream.
-				Message message = designatedPeer.getNextMessageBlocking();
-				
+				Message message;
+
+				message = designatedPeer.getNextMessageBlocking();
+
 				//If the message is not a keep alive, decode it, then send a corresponding message.
 				if (message != null){
 					switch(message.getType()){
@@ -75,8 +91,10 @@ public class Download implements Runnable{
 						System.out.println(designatedPeer + " sent unchoke message.");
 						Message temp = makeRequest(designatedPeer, tracker);
 						//temp will not be null if there is a piece I want. In this event, send a request.
-						if (temp != null){
+						if (temp != null) {
+
 							designatedPeer.sendMessage(temp);
+
 						}
 						break;
 					}
@@ -130,7 +148,9 @@ public class Download implements Runnable{
 						if (reqmsg != null) {
 							designatedPeer.sendMessage(reqmsg);
 						}
+						
 						break;
+						
 					}	
 					default:
 						//Unrecognized message type sent.
@@ -145,8 +165,14 @@ public class Download implements Runnable{
 			//downloading from the peer and they have no interest in any of your pieces.
 			catch (EOFException eof){
 				//Let the tracker know you are done. 
-				new URL(FileManager.tracker.makeURL(info, "completed"));
-				new URL(FileManager.tracker.makeURL(info, "stopped"));
+				try {
+					new URL(FileManager.tracker.makeURL(info, "completed"));
+					new URL(FileManager.tracker.makeURL(info, "stopped"));
+				} catch (MalformedURLException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
 				System.out.println("Peer " + designatedPeer + " has closed their stream.");
 				//Remove this peer from the list of peers we are downloading from, and disconnect them.
 				FileManager.approvedPeers.remove(designatedPeer);
@@ -159,12 +185,25 @@ public class Download implements Runnable{
 				FileManager.approvedPeers.remove(designatedPeer);
 				designatedPeer.disconnect();
 			}
+			//Accounting for various Exceptions.
+			catch (MalformedURLException e){
+				FileManager.approvedPeers.remove(designatedPeer);
+				designatedPeer.disconnect();
+			}
+			catch (IOException ioe){
+				FileManager.approvedPeers.remove(designatedPeer);
+				designatedPeer.disconnect();
+			}
+			catch (NoSuchAlgorithmException nsae){
+				FileManager.approvedPeers.remove(designatedPeer);
+				designatedPeer.disconnect();
+			}
+			
 		}
 		//On the event the program is exited, close input streams and close socket.
-		
 		FileManager.approvedPeers.remove(designatedPeer);
 		designatedPeer.disconnect();
-		
+	
 	}
 	
 	
@@ -176,6 +215,7 @@ public class Download implements Runnable{
 			byte[] piece = new byte[request.getPieceLength()];
 			FileManager.file.seek((request.getIndex() * (FileManager.tracker.getTorrentInfo().piece_length) + request.getOffset()));
 			FileManager.file.readFully(piece);
+			//Note how many bytes you have uploaded.
 			FileManager.addUploaded(request.getPieceLength());
 			return new PieceMessage(request.getIndex(), request.getOffset(), piece);
 		}
@@ -211,6 +251,7 @@ public class Download implements Runnable{
 		//Look through all peers
 		byte[] peerIdToMatch = new byte[]{'R', 'U', 'B', 'T', '1', '1'};
 	
+		//Look for all peers that have one of Rob's IPs and prefix RUBT11.
 		for (int i = 0; i < tracker.getPeers().size(); i++){
 			if( (tracker.getPeers().get(i).getIP().equals("128.6.5.130") || tracker.getPeers().get(i).getIP().equals("128.6.5.131") )&& 
 					Arrays.equals(Arrays.copyOfRange(tracker.getPeers().get(i).getPeerId(), 0, 6), peerIdToMatch) &&
@@ -229,15 +270,19 @@ public class Download implements Runnable{
 		}
 		else {
 			//The peer wanted for this part of the project was found.
-			
 		}
 		return designatedPeer;
 	}
 
 	private static Message analyzeBitfield(Peer designatedPeer, BitfieldMessage bitFieldMessage){
+		//Save the bitfield into the peer.
 		designatedPeer.newBitfield(bitFieldMessage.getBitfield());
+		//Display the Peer's bitfield.
 		System.out.println("The bitfield of Peer " + designatedPeer + " is ");
 		designatedPeer.printBitfield();
+		
+		//Check through the peer's bitfield and see if there are any pieces they have that you do not.
+		//If this is true, then you are interested in one of their pieces.
 		boolean interested = false;
 		for (int i = 0; i < bitFieldMessage.getBitfield().length; i++){
 			if (bitFieldMessage.getBitfield()[i] == true && FileManager.bitfield[i] == false){
@@ -256,36 +301,37 @@ public class Download implements Runnable{
 	}
 	
 	private static Message makeRequest(Peer designatedPeer, TrackerInfo tracker) throws EOFException{ 
-		System.out.println("I'm going to try to make a request from " + designatedPeer);
+		System.out.println("Making a request from " + designatedPeer);
+		//Look through every piece on your bitfield and see which ones you do not fully have.
         for (int pieceIndex = 0; pieceIndex < FileManager.bitfield.length; pieceIndex++){
-        		//System.out.println("Index #" + pieceIndex + " is " + FileManager.bitfield[pieceIndex] + " on the FileManager and on the Peers bitfield it is " + designatedPeer.getBitfield()[pieceIndex]);
+        		//If you do not have this piece, and there is not another one of your threads currently downloading it from another peer:
                 if (FileManager.bitfield[pieceIndex] == false && designatedPeer.getBitfield()[pieceIndex] == true && (FileManager.isRequested[pieceIndex] == null || Arrays.equals(FileManager.isRequested[pieceIndex].array(), designatedPeer.getPeerId()))){
+                		//Mark that you are downloading this piece from the peer this thread is connected to, so that other threads will not request it.
                 		FileManager.isRequested[pieceIndex] = ByteBuffer.wrap(designatedPeer.getPeerId());
+                		//For every subpiece of the piece you are trying to download it, see if you have it.
+                		//Request the piece you do not have.
                         for (int offsetIndex = 0; offsetIndex < (tracker.getTorrentInfo().piece_length)/(16384); offsetIndex ++){
                                 if (FileManager.perPieceBitfield[pieceIndex*(tracker.getTorrentInfo().piece_length)/(16384) + offsetIndex] == false){
-                                		
                                         System.out.println("Requesting Subpiece Index # " + offsetIndex + " of Piece # " + pieceIndex);
                                         return new RequestMessage(pieceIndex, offsetIndex*16384, 16384);
                                 }
                         }
                 }
         }
-        throw new EOFException();
-        /*
-        System.out.println("Nothing to request from " + designatedPeer);
+        //There is nothing you want from this peer.
         return null;
-        */
 	}
 	
 	private static synchronized Message savePiece(PieceMessage piece, TrackerInfo tracker) throws IOException, NoSuchAlgorithmException{   
-        //Mark that this piece has been obtained, and store it within the Metadata.
+        //Mark that this subpiece has been obtained, and store it within the per piece bitfield, used only by the program for making requests.
         FileManager.perPieceBitfield[piece.getIndex() * (tracker.getTorrentInfo().piece_length)/(16384) + (piece.getOffset()/16384)] = true;
         
-        //Thanks to Rob for helping me with RAF at this point.
+        //Thanks to Rob for helping me with RandomAccessFile at this point. He used his sagely ways to tell me the art of the seek.
         System.out.println("Writing Bytes " + (piece.getIndex()*(tracker.getTorrentInfo().piece_length)+piece.getOffset()) + "-" + (piece.getIndex()*(tracker.getTorrentInfo().piece_length)+piece.getOffset()+16384));
         FileManager.file.seek((piece.getIndex()*(tracker.getTorrentInfo().piece_length)+piece.getOffset()));
         FileManager.file.write(piece.getPieceData());
 
+        //Mark the amount of bytes you have downloaded to your tracker total.
         FileManager.addDownloaded(piece.getPieceData().length);
     
         FileManager.bitfield[piece.getIndex()] = true;
@@ -330,27 +376,33 @@ public class Download implements Runnable{
                 }
             }
         }
+        
         return null;
 	}
 	
+	
 	public static boolean shaHash(byte[] piece, byte[] compare) throws NoSuchAlgorithmException{
+		//Apply the SHA-Hash to the unhashed piece of the array. 
         MessageDigest digest = MessageDigest.getInstance("SHA-1");
 		digest.update(piece);
 		byte[] shahash = digest.digest();
 
 		// Verify the SHA-1 Hash of the downloaded piece.
 		if (!Arrays.equals(shahash, compare)) {
+			//If they are not equal, return false.
 			return false;
 		}
+		//If they are equal, return true.
 		return true;
 	}
 	
+
 	private static BitfieldMessage makeBitfield(){
 		boolean[] bitfieldToSend = new boolean[FileManager.bitfield.length];
 		for (int i = 0; i < FileManager.bitfield.length; i++){
 			bitfieldToSend[i] = FileManager.bitfield[i];
 		}
-		BitfieldMessage bfmsg = new BitfieldMessage(bitfieldToSend);
+		BitfieldMessage bfmsg = new BitfieldMessage(FileManager.bitfield);
 		return bfmsg;
 	}
 }

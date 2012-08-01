@@ -67,16 +67,28 @@ class RUBTClient {
 			//Code obtained partially from here: http://www.java2s.com/Code/Java/File-Input-Output/Appendingdatatoexistingfile.htm
 			FileManager.file = new RandomAccessFile(f, "rw");
 			
+			//If the progress file exists, read it in. However this is having issues?
 			if (f.exists() && new File(args[1].substring(0, args[1].lastIndexOf(".mp3")) + "PROGRESS.txt").exists()){
-				FileManager.readFileProgress(args[1]);
+				try {
+					FileManager.readFileProgress(args[1]);
+				}
+				catch (EOFException eof) {
+					System.out.println("Error in reading in progress file. I wish I knew why this suddenly was happening," +
+							" but alas I don't. I really feel like puking all over my keyboard from the anxiety. I have to conjure" +
+							" up fixes for this shit and do the whole writeup? I should have known I needed to do the whole write up." +
+							" I think in the future, the best thing to consider is, if you want to suceed, trust no one but yourself." +
+							" Work hard. Don't hold things off. And do it by yourself.");
+				}
 			}
 			
 			tracker = Metadata.httpGetRequest(FileManager.info);
 			FileManager.tracker = tracker;
 			
+			//Let user know how to exit program.
 			System.out.println("Type q in the command line to quit");
 			Thread.sleep(2000);
 			
+			//For each of the approved peers, create a connection with them.
 			ArrayList<Thread> peerThreads = new ArrayList<Thread>();
 			for (int i = 0; i < FileManager.approvedPeers.size(); i++){
 				Download peer = new Download();
@@ -84,21 +96,32 @@ class RUBTClient {
 				peerThreads.get(i).start();
 			}
 		    
+			//Keep a thread running that will make tracker announces. 
 			Runnable ta = new TrackerAnnounce();
 			Thread trackerthread = new Thread(ta);
 			trackerthread.start();
 			
+			//Read in from the user.
 			BufferedReader quitStatus = new BufferedReader(new InputStreamReader(System.in));
 			String input = quitStatus.readLine();
 			
+			//Keep the program running until user enters q.
 			while(!input.equalsIgnoreCase("q")){
 				input = quitStatus.readLine();
-				System.out.println(input);
 			}
 			
-			keepRunning = false; 
+			keepRunning = false;
+			for (int i = 0; i < FileManager.approvedPeers.size(); i++){
+				peerThreads.get(i).interrupt();
+			}
+			
+			
 			trackerthread.interrupt();
 			FileManager.storeFileProgress(args[1]);
+			System.out.println("Quitting program... ");
+			
+			//Doing the unthinkable. I'm so sorry Rob... it just wouldn't quit without this. I don't know why it broke last minute.
+			System.exit(0);
 		} catch (BencodingException e) {
 			// Throw exception in the case of Bencoding issue
 			System.out.println(e.toString());

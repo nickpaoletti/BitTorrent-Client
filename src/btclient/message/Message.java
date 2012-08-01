@@ -173,7 +173,7 @@ public class Message {
 			}
 			//For Choke, Unchoke, Interested, and Uninterested, you have nothing special to write. Woo.
 			}
-
+			
 		}
 		dos.flush();
 	}

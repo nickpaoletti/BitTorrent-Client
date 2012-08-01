@@ -33,9 +33,12 @@ public class FileManager{
 	public static int downloaded, uploaded;
 	
 	//File writing code obtained from http://www.roseindia.net/java/beginners/java-write-to-file.shtml
-	public static void storeFileProgress(String filename) throws IOException {
+	//Must be synchronized because of the stupid system.exit I added. The trouble.
+	public static synchronized void storeFileProgress(String filename) throws IOException {
+		//Write in the progress of the file in a .txt file.
 		FileWriter write = new FileWriter(filename.substring(0, filename.lastIndexOf(".mp3")) + "PROGRESS.txt");
 		BufferedWriter out = new BufferedWriter(write);
+		//Write a 1 in each index if that file is there, a 0 if false.
 		for (int i = 0; i < bitfield.length; i++){
 			if (bitfield[i] == true){
 				out.write('1');
@@ -49,6 +52,7 @@ public class FileManager{
 	}
 
 	public static void readFileProgress(String filename) throws IOException, NoSuchAlgorithmException {
+		//Read in the pieces given by storeFileProgress.
 		FileManager.havePieces = true;
 		FileInputStream fileRead = new FileInputStream(new File(filename.substring(0, filename.lastIndexOf(".mp3")) + "PROGRESS.txt"));
 		int indexCounter = 0;
