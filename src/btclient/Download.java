@@ -344,6 +344,7 @@ public class Download implements Runnable{
                 }
                 catch (ArrayIndexOutOfBoundsException aioobe) {
                     //Do nothing because this is the final piece, where there are not 12 subpieces.
+                	 
                 }
         }
         
