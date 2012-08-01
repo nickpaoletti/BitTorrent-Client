@@ -28,10 +28,8 @@ class RUBTClient {
 		try {
 			LogManager.getLogManager().readConfiguration(logStream);
 		} catch (SecurityException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 		// Set the log level as desired for the root level.
@@ -43,7 +41,8 @@ class RUBTClient {
 //		log.setLevel(Level.ALL);
 //	}
 	/**
-	 * main is where it all begins.
+	 * main is where it all begins. This method will initialize the file manager and instantiate a thread
+	 * for each peer. This method also contains the main control loop that will wait for a quit command.
 	 * 
 	 * @param args
 	 * 		args[2] - torrent file path.
@@ -87,7 +86,6 @@ class RUBTClient {
 				input = quitStatus.readLine();
 				System.out.println(input);
 			}
-			
 			keepRunning = false; 
 			trackerthread.interrupt();
 			FileManager.storeFileProgress(args[1]);

@@ -52,9 +52,9 @@ public class Message {
 	 */
 	protected final byte type;
 	/**
-	 * 
-	 * @param length
-	 * @param type
+	 * Constructs a message object.
+	 * @param length length of the message.
+	 * @param type type of the message.
 	 */
 	protected Message(final int length, final byte type) {
 		this.length = length;
@@ -117,9 +117,10 @@ public class Message {
 		}
 	}
 	/**
+	 * This method will take a message object, determine its type and then encode it.
 	 * 
-	 * @param msg
-	 * @param out
+	 * @param msg <code>Message</code>
+	 * @param out the stream to which is the encoded message is to be written.
 	 * @throws IOException
 	 */
 	public static void encode(final Message msg, final OutputStream out)
@@ -180,9 +181,9 @@ public class Message {
 	 * splitting up each byte into four 'boolean' bits. This is stored within
 	 * the Peer, and updated upon successful downloading of pieces of the file.
 	 * 
-	 * @param message
-	 * @param numbits
-	 * @return
+	 * @param message <code>Message</code>
+	 * @param numbits 
+	 * @return <code>boolean[]</code> representation of the bitfield.
 	 * @throws IOException
 	 */
 	private static boolean[] bitfield(byte[] message, int numbits) throws IOException {
@@ -212,15 +213,15 @@ public class Message {
 		return bitfield;
 	}
 	/**
-	 * 
-	 * @return
+	 * This method will return the type of this message.
+	 * @return <code>Byte</byte>
 	 */
 	public byte getType() {
 		return type;
 	}
 	/**
-	 * 
-	 * @return
+	 * This method will return the length of this message.
+	 * @return <code>Integer</code>
 	 */
 	public int getLength() {
 		return length;

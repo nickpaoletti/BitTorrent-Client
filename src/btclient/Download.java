@@ -164,10 +164,10 @@ public class Download implements Runnable{
 		return null;
 	}
 	/**
-	 * 
-	 * @param have
-	 * @param designatedPeer
-	 * @return
+	 * This method will determine if we are interested in a piece specified by a have message.
+	 * @param have 
+	 * @param designatedPeer 
+	 * @return 
 	 */
 	private static Message analyzeHave(HaveMessage have, Peer designatedPeer){
 		boolean interested = false;
