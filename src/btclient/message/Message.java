@@ -1,29 +1,20 @@
 package btclient.message;
 
 import java.io.*;
-import java.nio.*;
-import java.security.*;
-import java.util.Arrays;
 import java.util.logging.Logger;
-
-import btclient.Download;
 import btclient.FileManager;
-import btclient.Peer;
-import btclient.TrackerInfo;
-
-/* Message.java
+/**
+ *  Message.java
  * 
- * by Nick Paoletti and Daniel Selmon
-
+ *  @author Nick Paoletti
+ *  @author Daniel Selmon
+ * 
  * This is the Message class, which handles basic functionality for the BitTorrent messages needed
  * during this part of the project. It will take in messages read from the Peer, and give back to the peer
  * a corresponding message that works well as a response.
  */
-
 public class Message {
-
 	private static final Logger log = Logger.getLogger(Message.class.getName());
-
 	public static final byte TYPE_CHOKE = 0;
 	public static final byte TYPE_UNCHOKE = 1;
 	public static final byte TYPE_INTERESTED = 2;
@@ -32,7 +23,6 @@ public class Message {
 	public static final byte TYPE_BITFIELD = 5;
 	public static final byte TYPE_REQUEST = 6;
 	public static final byte TYPE_PIECE = 7;
-
 	/**
 	 * A choke message.
 	 */
@@ -53,27 +43,34 @@ public class Message {
 	 * An uninterested message.
 	 */
 	public static final Message UNINTERESTED = new Message(1, TYPE_UNINTERESTED);
-
 	/**
 	 * Length of the remaining message, in octets.
 	 */
 	protected final int length;
-
 	/**
 	 * The ID of the message.
 	 */
 	protected final byte type;
-
+	/**
+	 * 
+	 * @param length
+	 * @param type
+	 */
 	protected Message(final int length, final byte type) {
 		this.length = length;
 		this.type = type;
 	}
-
-	// When given a message from the Peer, respond with a byte array that is a
-	// fitting response.
-	// This is not the approach which will remain in future parts of the
-	// project, and is very
-	// limited in functionality.
+	/**
+	 * When given a message from the Peer, respond with a byte array that is a
+	 * fitting response.
+	 * This is not the approach which will remain in future parts of the
+	 * project, and is very
+	 * limited in functionality.
+	 * 
+	 * @param in
+	 * @return
+	 * @throws IOException
+	 */
 	public static Message decode(final InputStream in) throws IOException {
 		DataInputStream din = new DataInputStream(in);
 		int length = din.readInt();
@@ -114,13 +111,17 @@ public class Message {
 			din.readFully(pieceData);
 			return new PieceMessage(index, offset, pieceData);
 		}
-
 		default:
 			log.severe("Unknown message type " + ('0' + type));
 			throw new IOException("Unknown message type " + ('0' + type));
 		}
 	}
-
+	/**
+	 * 
+	 * @param msg
+	 * @param out
+	 * @throws IOException
+	 */
 	public static void encode(final Message msg, final OutputStream out)
 			throws IOException {
 		DataOutputStream dos = new DataOutputStream(out);
@@ -136,7 +137,6 @@ public class Message {
 				 * From Java Programming Sakai site, https://sakai.rutgers.edu/portal/site/e07619c5-a492-4ebe-8771-179dfe450ae4/page/0a7200cf-0538-479a-a197-8d398c438484
 				 * Thanks again, Rob. :) <-- Check that smiley face.
 				 */
-				
 				int length = ((BitfieldMessage)msg).getBitfield().length / 8;
 				int mod = ((BitfieldMessage)msg).getBitfield().length % 8;
 				if(mod != 0){
@@ -155,7 +155,6 @@ public class Message {
 						}
 					}
 				}
-
 				dos.write(byteBooleanArray);
 				break;
 			}
@@ -173,37 +172,35 @@ public class Message {
 			}
 			//For Choke, Unchoke, Interested, and Uninterested, you have nothing special to write. Woo.
 			}
-
 		}
 		dos.flush();
 	}
-
-	/*
+	/**
 	 * Given a bitfield message from the peer, it creates a boolean bitfield by
 	 * splitting up each byte into four 'boolean' bits. This is stored within
 	 * the Peer, and updated upon successful downloading of pieces of the file.
+	 * 
+	 * @param message
+	 * @param numbits
+	 * @return
+	 * @throws IOException
 	 */
-	private static boolean[] bitfield(byte[] message, int numbits)
-			throws IOException {
+	private static boolean[] bitfield(byte[] message, int numbits) throws IOException {
 		System.out.println("Peer sent bitfield.");
 		// For each byte in the bitfield reach from the file, there are 8 bits.
-
 		/*
 		 * Code for byte to bit conversion (mostly) taken from Rob Moore's
 		 * BitToBoolean.java located at
 		 * https://sakai.rutgers.edu/portal/site/e07619c5
 		 * -a492-4ebe-8771-179dfe450ae4/page/0a7200cf-0538-479a-a197-8d398c438484
 		 */
-
 		boolean[] bitfield = new boolean[numbits];
 		int bitcounter = 0;
-
 		for (int i = 0; i < message.length ; ++i) {
 			for (int bitIndex = 7; bitIndex >= 0; --bitIndex) {
 				if (bitcounter >= numbits) {
 					break;
 				}
-
 				if ((message[i] >> bitIndex & 0x01) == 1) {
 					bitfield[bitcounter] = true;
 				} else {
@@ -212,14 +209,19 @@ public class Message {
 				bitcounter++;
 			}
 		}
-
 		return bitfield;
 	}
-
+	/**
+	 * 
+	 * @return
+	 */
 	public byte getType() {
 		return type;
 	}
-
+	/**
+	 * 
+	 * @return
+	 */
 	public int getLength() {
 		return length;
 	}
