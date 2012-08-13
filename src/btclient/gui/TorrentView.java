@@ -16,7 +16,7 @@ import javax.swing.JOptionPane;
 public class TorrentView extends JFrame{
 	private static final long serialVersionUID = 2160729035270663944L;
 	private static final String aboutText = "About Text goes here!";
-	private TorrentViewContent content;
+	public TorrentViewContent content;
 	private boolean[] chunky;
 	private Thread t;
 	private JMenuBar menu;
@@ -87,7 +87,7 @@ public class TorrentView extends JFrame{
 		
 		setSize(700,600);
 		setLocationRelativeTo(null);
-		content = new TorrentViewContent(chunks);
+		setContent(new TorrentViewContent(chunks));
 		setLayout(new BorderLayout());
 		add(content,BorderLayout.CENTER);
 		add(menu,BorderLayout.NORTH);
@@ -137,7 +137,6 @@ public class TorrentView extends JFrame{
 						updateGraphics();
 						trueCount++;
 						content.setUploadSpeed(rng.nextInt(900) + "Kb/s");
-						content.setDownloadSpeed(rng.nextInt(900) + "Kb/s");
 						content.setFileChunkRatio(trueCount + "/" + chunky.length);
 						content.setProgressbarPercentage((int)(1000 * (double)trueCount/(double)chunky.length));
 						content.setSeedsPeers(rng.nextInt(100) + "/" + rng.nextInt(300));
@@ -157,5 +156,9 @@ public class TorrentView extends JFrame{
 	public void startTestThread(){
 		t.start();
 	}
+	public void setContent(TorrentViewContent content) {
+		this.content = content;
+	}
+	
 	
 }

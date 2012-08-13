@@ -30,6 +30,10 @@ public class FileManager{
         public static int downloaded, uploaded, unchokedPeers;
         public static final int maxUnchokedPeers = 6;
         public static boolean fileComplete;
+        
+        public static int oldDownloaded, oldUploaded;
+        public static double downloadSpeed, uploadSpeed; //Bytes per second.
+        
         /**
          * 
          * File writing code obtained from http://www.roseindia.net/java/beginners/java-write-to-file.shtml
@@ -110,6 +114,8 @@ public class FileManager{
                 uploaded = 0;
                 downloaded = 0;
                 unchokedPeers = 0;
+                oldUploaded = 0;
+                oldDownloaded = 0;
                 fileComplete = false;
         }
         

@@ -21,7 +21,9 @@ import btclient.gui.TorrentView;
  */
 class RUBTClient {
         private static final Level LOG_LEVEL = Level.ALL;
-        public static boolean keepRunning = true;       
+        public static boolean keepRunning = true;   
+        public static TorrentView tv;
+        
         static {
                 // Load the logger configuration file.
                 InputStream logStream = RUBTClient.class.getClassLoader().getResourceAsStream("logging.properties");
@@ -88,15 +90,19 @@ class RUBTClient {
 			Thread chokingthread = new Thread(pc);
 			chokingthread.start();
 			
+			Runnable sc = new SpeedCalculation();
+			Thread speedcalcthread = new Thread(sc);
+			speedcalcthread.start();
+			
 			final boolean[] chunky = new boolean[FileManager.info.piece_hashes.length];
-			TorrentView tv = new TorrentView(chunky);
+			tv = new TorrentView(chunky);
 			tv.createTestThread();
 			tv.startTestThread();
 			tv.setFilename(args[1]);
 			tv.setFileSize(FileManager.info.file_length/1048576.0 + " MB");
+			
 
-			BufferedReader quitStatus = new BufferedReader(
-					new InputStreamReader(System.in));
+			BufferedReader quitStatus = new BufferedReader(new InputStreamReader(System.in));
 			String input = quitStatus.readLine();
 			while (!input.equalsIgnoreCase("q")) {
 				input = quitStatus.readLine();
@@ -105,6 +111,7 @@ class RUBTClient {
 			keepRunning = false;
 			trackerthread.interrupt();
 			chokingthread.interrupt();
+			speedcalcthread.interrupt();
 			FileManager.storeFileProgress(args[1]);
 		} catch (BencodingException e) {
 			// Throw exception in the case of Bencoding issue
