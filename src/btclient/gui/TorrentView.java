@@ -1,9 +1,11 @@
 package btclient.gui;
+
 import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.Random;
-
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.JMenu;
@@ -36,7 +38,19 @@ public class TorrentView extends JFrame{
 		help.add(about);
 		menu.add(file);
 		menu.add(help);
-		
+		/**
+		 * ActionListener for the menu quit option.
+		 */
+		quit.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e) {
+				// TODO link gracefully exit code here.
+				System.out.println("Exit event heard, (Menu Exit)");
+	        	System.exit(0);
+			}
+		});
+		/**
+		 * ActionListener for the menu open file option.
+		 */
 		open.addActionListener(new ActionListener(){
 			public void actionPerformed(ActionEvent e){
 				// TODO Auto-generated place file choose dialog here.
@@ -44,6 +58,9 @@ public class TorrentView extends JFrame{
 				JOptionPane.showInputDialog("Enter a path to download to:");
 			}
 		});
+		/**
+		 * ActionListener for the About menu option.
+		 */
 		about.addActionListener(new ActionListener(){
 
 			@Override
@@ -55,8 +72,20 @@ public class TorrentView extends JFrame{
 			
 		});
 		chunky = chunks;
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setSize(600,600);
+		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+	    
+		addWindowListener(new WindowAdapter() {
+	    	 
+	        public void windowClosing(WindowEvent e) {
+	        	// TODO Link gracefully exit method here.
+	        	System.out.println("Exit event heard, (X was clicked)");
+	        	System.exit(0);
+	        }
+	    });
+		
+		
+		
+		setSize(700,600);
 		setLocationRelativeTo(null);
 		content = new TorrentViewContent(chunks);
 		setLayout(new BorderLayout());
