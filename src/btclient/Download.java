@@ -74,7 +74,15 @@ public class Download implements Runnable{
                                         }
                                         case Message.TYPE_INTERESTED: {
                                                 System.out.println(designatedPeer + " is interested in a piece.");
-                                                designatedPeer.sendMessage(Message.UNCHOKE);
+                                                if (FileManager.unchokedPeers > FileManager.maxUnchokedPeers){
+                                                	designatedPeer.sendMessage(Message.CHOKE);
+                                                	designatedPeer.setChokeStatus(0);
+                                                }
+                                                else {
+                                                	designatedPeer.sendMessage(Message.UNCHOKE);
+                                                	designatedPeer.setChokeStatus(1);
+                                                	FileManager.unchokedPeers++;
+                                                }
                                                 break;
                                         }
                                         case Message.TYPE_UNINTERESTED:
@@ -142,6 +150,8 @@ public class Download implements Runnable{
                         }
                 }
                 //Close input streams. Close socket.
+                new URL(FileManager.tracker.makeURL(info, "completed"));
+                new URL(FileManager.tracker.makeURL(info, "stopped"));
                 FileManager.approvedPeers.remove(designatedPeer);
                 designatedPeer.disconnect();
         }
@@ -161,6 +171,7 @@ public class Download implements Runnable{
                         designatedPeer.addDownloaded(request.getPieceLength());
                         return new PieceMessage(request.getIndex(), request.getOffset(), piece);
                 }
+                System.out.println("Do I have it? " + FileManager.bitfield[request.getIndex()]);
                 System.out.println("NOT GOOD!!!!!!");
                 return null;
         }
@@ -173,6 +184,7 @@ public class Download implements Runnable{
         private static Message analyzeHave(HaveMessage have, Peer designatedPeer){
                 boolean interested = false;
                 designatedPeer.changeBitfield(have.getIndex(), true);
+                designatedPeer.updateByHas(have.getIndex());
                 for (int i = 0; i < FileManager.bitfield.length; i++){
                         if (FileManager.bitfield[have.getIndex()] == false){
                                 interested = true;
@@ -224,6 +236,7 @@ public class Download implements Runnable{
          */
         private static Message analyzeBitfield(Peer designatedPeer, BitfieldMessage bitFieldMessage){
                 designatedPeer.newBitfield(bitFieldMessage.getBitfield());
+                designatedPeer.updateByBitfield();
                 System.out.println("The bitfield of Peer " + designatedPeer + " is ");
                 designatedPeer.printBitfield();
                 boolean interested = false;
@@ -248,22 +261,34 @@ public class Download implements Runnable{
          * @throws EOFException
          */
         private static Message makeRequest(Peer designatedPeer, TrackerInfo tracker) throws EOFException{ 
-                System.out.println("I'm going to try to make a request from " + designatedPeer);
-        for (int pieceIndex = 0; pieceIndex < FileManager.bitfield.length; pieceIndex++){
-                        //System.out.println("Index #" + pieceIndex + " is " + FileManager.bitfield[pieceIndex] + " on the FileManager and on the Peers bitfield it is " + designatedPeer.getBitfield()[pieceIndex]);
+        	System.out.println("I'm going to try to make a request from " + designatedPeer);
+        	
+        	int minRarity = Integer.MAX_VALUE;
+    		int indexToDownload = -1;
+        	
+        	for (int pieceIndex = 0; pieceIndex < FileManager.bitfield.length; pieceIndex++){
+        		
                 if (FileManager.bitfield[pieceIndex] == false && designatedPeer.getBitfield()[pieceIndex] == true && (FileManager.isRequested[pieceIndex] == null || Arrays.equals(FileManager.isRequested[pieceIndex].array(), designatedPeer.getPeerId()))){
-                                FileManager.isRequested[pieceIndex] = ByteBuffer.wrap(designatedPeer.getPeerId());
-                        for (int offsetIndex = 0; offsetIndex < (tracker.getTorrentInfo().piece_length)/(16384); offsetIndex ++){
-                                if (FileManager.perPieceBitfield[pieceIndex*(tracker.getTorrentInfo().piece_length)/(16384) + offsetIndex] == false){
-                                                
-                                        System.out.println("Requesting Subpiece Index # " + offsetIndex + " of Piece # " + pieceIndex);
-                                        return new RequestMessage(pieceIndex, offsetIndex*16384, 16384);
-                                }
-                        }
+                	FileManager.isRequested[pieceIndex] = ByteBuffer.wrap(designatedPeer.getPeerId());
+                	
+                	if (FileManager.rarityTracker[pieceIndex] < minRarity){
+                		indexToDownload = pieceIndex;
+                	}
+                	
+        		}
+                if (indexToDownload != -1){
+                	for (int offsetIndex = 0; offsetIndex < (tracker.getTorrentInfo().piece_length)/(16384); offsetIndex ++){
+                		if (FileManager.perPieceBitfield[indexToDownload*(tracker.getTorrentInfo().piece_length)/(16384) + offsetIndex] == false){
+                			System.out.println("Requesting Subpiece Index # " + offsetIndex + " of Piece # " + indexToDownload);
+                			return new RequestMessage(indexToDownload, offsetIndex*16384, 16384);
+                		}
+                	}
                 }
-        }
-        throw new EOFException();
-        }
+
+        	}
+        	FileManager.fileComplete = true;
+        	return null;
+		}
         /**
          * 
          * @param piece

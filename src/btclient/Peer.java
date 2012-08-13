@@ -32,7 +32,7 @@ public class Peer {
 	private static final Logger log = Logger.getLogger(Peer.class.getName());
 	private String ip;
 	private byte[] peerId;
-	private int port;
+	private int port, chokeStatus; //0 for choked, 1 for unchoke
 	private boolean[] bitfield;
 	private Socket socket;
 	private InputStream in;
@@ -46,6 +46,7 @@ public class Peer {
 
 	private int peerUploaded;
 	private int peerDownloaded;
+	private double downloadRate, uploadRate;
 	
 
 	/**
@@ -59,8 +60,12 @@ public class Peer {
 		this.ip = ip;
 		this.peerId = peerid;
 		this.port = port;
+		chokeStatus = 0;
 		// Defaults to "false"
 		this.bitfield = new boolean[numPieces];
+		uploadRate = 0;
+		downloadRate = 0;
+		
 	}
 	/**
 	 * 
@@ -280,5 +285,40 @@ public class Peer {
 	
 	public void addUploaded(int bytesize){
 		peerUploaded += bytesize;
+	}
+	
+	public void setDownloaded(int newValue){
+		peerDownloaded = newValue;
+	}
+	
+	public void setUploaded(int newValue){
+		peerUploaded = newValue;
+	}
+	
+	
+	public void updateByBitfield(){
+		FileManager.updateRarity(bitfield);
+	}
+	
+	public void updateByHas(int index){
+		FileManager.updateRarity(index);
+	}
+	public void setChokeStatus(int chokeStatus) {
+		this.chokeStatus = chokeStatus;
+	}
+	public int getChokeStatus() {
+		return chokeStatus;
+	}
+	public void setUploadRate(int interval) {
+		this.uploadRate = peerUploaded / interval;
+	}
+	public double getUploadRate() {
+		return uploadRate;
+	}
+	public void setDownloadRate(int interval) {
+		this.downloadRate = peerDownloaded / interval;
+	}
+	public double getDownloadRate() {
+		return downloadRate;
 	}
 }

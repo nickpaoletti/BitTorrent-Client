@@ -48,62 +48,69 @@ class RUBTClient {
          *              args[2] - torrent file path.
          *              args[1] - output file name.
          */
-        public static void main(String[] args) {
-                TrackerInfo tracker = null;
-                if (args.length != 2) {
-                        // Quit if program arguments are incorrect.
-                        System.out.println("Correct Usage: java RUBTClient [torretfile].torrent [outputfilename]");
-                        return;
-                }
-                try {
-                        // Convert the .torrent file into a TrackerInfo object, and download
-                        // the file using
-                        // the given tracker info.
-                        FileManager.info = Metadata.makeTorrentInfo(new File(args[0]));
-                        File f = new File(args[1]);
-                        FileManager.initializeFields();
-                        //Code obtained partially from here: http://www.java2s.com/Code/Java/File-Input-Output/Appendingdatatoexistingfile.htm
-                        FileManager.file = new RandomAccessFile(f, "rw");
-                        if (f.exists() && new File(args[1].substring(0, args[1].lastIndexOf(".mp3")) + "PROGRESS.txt").exists()){
-                                FileManager.readFileProgress(args[1]);
-                        }
-                        tracker = Metadata.httpGetRequest(FileManager.info);
-                        FileManager.tracker = tracker;
-                        System.out.println("Type q in the command line to quit");
-                        Thread.sleep(2000);
-                        ArrayList<Thread> peerThreads = new ArrayList<Thread>();
-                        for (int i = 0; i < FileManager.approvedPeers.size(); i++){
-                                Download peer = new Download();
-                                peerThreads.add(new Thread(peer));
-                                peerThreads.get(i).start();
-                        }
-                        Runnable ta = new TrackerAnnounce();
-                        Thread trackerthread = new Thread(ta);
-                        trackerthread.start();
-                        BufferedReader quitStatus = new BufferedReader(new InputStreamReader(System.in));
-                        String input = quitStatus.readLine();
-                        while(!input.equalsIgnoreCase("q")){
-                                input = quitStatus.readLine();
-                                System.out.println(input);
-                        }
-                        keepRunning = false; 
-                        trackerthread.interrupt();
-                        FileManager.storeFileProgress(args[1]);
-                } catch (BencodingException e) {
-                        // Throw exception in the case of Bencoding issue
-                        System.out.println(e.toString());
-                        return;
-                } /* catch (IOException e) {
-                        // Throw exception in the case of IO issues
-                        System.out.println(e.toString());
-                        return;
-                } */ catch (Exception e) {
-                        // In general or other case exceptions, throw an exception.
-                        System.out.println("Unknown Exception");
-                        e.printStackTrace();
-                        return;
-                }
-        }
+	public static void main(String[] args) {
+		TrackerInfo tracker = null;
+		if (args.length != 2) {
+			// Quit if program arguments are incorrect.
+			System.out.println("Correct Usage: java RUBTClient [torrentfile].torrent [outputfilename]");
+			return;
+		}
+		try {
+			// Convert the .torrent file into a TrackerInfo object, and download
+			// the file using
+			// the given tracker info.
+			FileManager.info = Metadata.makeTorrentInfo(new File(args[0]));
+			File f = new File(args[1]);
+			FileManager.initializeFields();
+			// Code obtained partially from here:
+			// http://www.java2s.com/Code/Java/File-Input-Output/Appendingdatatoexistingfile.htm
+			FileManager.file = new RandomAccessFile(f, "rw");
+			if (f.exists() && new File(args[1].substring(0, args[1].lastIndexOf(".mp3")) + "PROGRESS.txt").exists()) {
+				FileManager.readFileProgress(args[1]);
+			}
+			tracker = Metadata.httpGetRequest(FileManager.info);
+			FileManager.tracker = tracker;
+			System.out.println("Type q in the command line to quit");
+			Thread.sleep(2000);
+			ArrayList<Thread> peerThreads = new ArrayList<Thread>();
+			for (int i = 0; i < FileManager.approvedPeers.size(); i++) {
+				Download peer = new Download();
+				peerThreads.add(new Thread(peer));
+				peerThreads.get(i).start();
+			}
+			Runnable ta = new TrackerAnnounce();
+			Thread trackerthread = new Thread(ta);
+			trackerthread.start();
+
+			Runnable pc = new PeerChoking();
+			Thread chokingthread = new Thread(pc);
+			chokingthread.start();
+
+			BufferedReader quitStatus = new BufferedReader(
+					new InputStreamReader(System.in));
+			String input = quitStatus.readLine();
+			while (!input.equalsIgnoreCase("q")) {
+				input = quitStatus.readLine();
+				System.out.println(input);
+			}
+			keepRunning = false;
+			trackerthread.interrupt();
+			chokingthread.interrupt();
+			FileManager.storeFileProgress(args[1]);
+		} catch (BencodingException e) {
+			// Throw exception in the case of Bencoding issue
+			System.out.println(e.toString());
+			return;
+		} /*
+		 * catch (IOException e) { // Throw exception in the case of IO issues
+		 * System.out.println(e.toString()); return; }
+		 */catch (Exception e) {
+			// In general or other case exceptions, throw an exception.
+			System.out.println("Unknown Exception");
+			e.printStackTrace();
+			return;
+		}
+	}
         /**
          * Replaces the ConsoleHandler for a specific Logger with one that will log
          * all messages. This method could be adapted to replace other types of
