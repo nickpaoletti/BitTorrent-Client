@@ -38,7 +38,7 @@ public class TorrentViewContent extends JPanel{
 		gb = new GridBagLayout();
 		gc = new GridBagConstraints();
 		tableData = new JTable(tableModel);
-		tableData.setPreferredScrollableViewportSize(new Dimension(400,400));
+		tableData.setPreferredScrollableViewportSize(new Dimension(600,400));
 		tableData.setFillsViewportHeight(true);
 		tableView = new JScrollPane(tableData);
 		setLayout(gb);

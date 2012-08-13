@@ -5,13 +5,13 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.geom.Rectangle2D;
-import java.math.BigInteger;
+//import java.math.BigInteger;
 import javax.swing.JComponent;
 
 public class DownloadBar extends JComponent{
 	private static final long serialVersionUID = 1L;
 	private boolean[] chunkArray = null;
-	private BigInteger numBytes = null;
+	//private BigInteger numBytes = null;
 	private static final int MAX_LENGTH = 400;
 	private static final int HEIGHT = 20;
 	private double chunkWidth = -1;
