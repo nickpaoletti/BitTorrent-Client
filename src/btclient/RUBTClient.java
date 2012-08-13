@@ -8,6 +8,7 @@ import java.util.logging.Level;
 import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import btclient.bencoding.BencodingException;
+import btclient.gui.TorrentView;
 /**
  * RUBTClient.java 
  * 
@@ -40,6 +41,7 @@ class RUBTClient {
 //      static {
 //              log.setLevel(Level.ALL);
 //      }
+        
         /**
          * main is where it all begins. This method will initialize the file manager and instantiate a thread
          * for each peer. This method also contains the main control loop that will wait for a quit command.
@@ -85,6 +87,13 @@ class RUBTClient {
 			Runnable pc = new PeerChoking();
 			Thread chokingthread = new Thread(pc);
 			chokingthread.start();
+			
+			final boolean[] chunky = new boolean[FileManager.info.piece_hashes.length];
+			TorrentView tv = new TorrentView(chunky);
+			tv.createTestThread();
+			tv.startTestThread();
+			tv.setFilename(args[1]);
+			tv.setFileSize(FileManager.info.file_length/1048576.0 + " MB");
 
 			BufferedReader quitStatus = new BufferedReader(
 					new InputStreamReader(System.in));

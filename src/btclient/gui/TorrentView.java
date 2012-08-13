@@ -127,8 +127,6 @@ public class TorrentView extends JFrame{
 		t = new Thread(new Runnable(){
 			public void run(){
 				int trueCount = 0;
-				content.setFilename("Nesticle.exe");
-				content.setFileSize("Over 9000");
 				Random rng = new Random();
 				while(trueCount < chunky.length){
 					int index = rng.nextInt(chunky.length);
@@ -159,10 +157,5 @@ public class TorrentView extends JFrame{
 	public void startTestThread(){
 		t.start();
 	}
-	public static void main(String[] args){
-		final boolean[] chunky = new boolean[100];
-		TorrentView tv = new TorrentView(chunky);
-		tv.createTestThread();
-		tv.startTestThread();	
-	}
+	
 }
