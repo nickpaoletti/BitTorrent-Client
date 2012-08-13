@@ -92,7 +92,7 @@ public class Download implements Runnable{
 					case Message.TYPE_REQUEST: {
 						System.out.println(designatedPeer + " requested Piece: " + ((RequestMessage)message).getIndex() + " at offset " + 
 								((RequestMessage)message).getOffset());
-						PieceMessage pm = makePiece((RequestMessage)message);
+						PieceMessage pm = makePiece((RequestMessage)message, designatedPeer);
 						System.out.println("Sending " + designatedPeer + " a piece at Index " + pm.getIndex() + " at offset " + pm.getOffset());
 						designatedPeer.sendMessage(pm);
 						break;
@@ -102,7 +102,7 @@ public class Download implements Runnable{
 								" at offset " + ((PieceMessage)message).getOffset());
 						// Decode the piece. Save the file.
 						Message hasmsg = savePiece((PieceMessage) message,
-								tracker);
+								tracker, designatedPeer);
 						if (hasmsg != null) {
 							// designatedPeer.sendMessage(hasmsg);
 							for (int i = 0; i < FileManager.approvedPeers.size(); i++) {
@@ -151,13 +151,14 @@ public class Download implements Runnable{
 	 * @return
 	 * @throws IOException
 	 */
-	private static synchronized PieceMessage makePiece(RequestMessage request) throws IOException {
+	private static synchronized PieceMessage makePiece(RequestMessage request, Peer designatedPeer) throws IOException {
 		if (FileManager.bitfield[request.getIndex()] == true
 				&& !(request.getPieceLength() > 131072)) {
 			byte[] piece = new byte[request.getPieceLength()];
 			FileManager.file.seek((request.getIndex() * (FileManager.tracker.getTorrentInfo().piece_length) + request.getOffset()));
 			FileManager.file.readFully(piece);
 			FileManager.addUploaded(request.getPieceLength());
+			designatedPeer.addDownloaded(request.getPieceLength());
 			return new PieceMessage(request.getIndex(), request.getOffset(), piece);
 		}
 		System.out.println("NOT GOOD!!!!!!");
@@ -271,7 +272,7 @@ public class Download implements Runnable{
 	 * @throws IOException
 	 * @throws NoSuchAlgorithmException
 	 */
-	private static synchronized Message savePiece(PieceMessage piece, TrackerInfo tracker) throws IOException, NoSuchAlgorithmException{   
+	private static synchronized Message savePiece(PieceMessage piece, TrackerInfo tracker, Peer designatedPeer) throws IOException, NoSuchAlgorithmException{   
         //Mark that this piece has been obtained, and store it within the Metadata.
         FileManager.perPieceBitfield[piece.getIndex() * (tracker.getTorrentInfo().piece_length)/(16384) + (piece.getOffset()/16384)] = true; 
         //Thanks to Rob for helping me with RAF at this point.
@@ -279,6 +280,7 @@ public class Download implements Runnable{
         FileManager.file.seek((piece.getIndex()*(tracker.getTorrentInfo().piece_length)+piece.getOffset()));
         FileManager.file.write(piece.getPieceData());
         FileManager.addDownloaded(piece.getPieceData().length);
+        designatedPeer.addUploaded(piece.getPieceData().length);
         FileManager.bitfield[piece.getIndex()] = true;
         for(int pieceCount = 0; pieceCount < (tracker.getTorrentInfo().piece_length)/(16384); pieceCount++){
                 //If we're at the final step, we can't use the bottom statement which will cause OutOfBounds issues.

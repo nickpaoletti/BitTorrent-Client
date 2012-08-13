@@ -93,11 +93,11 @@ class RUBTClient {
 			// Throw exception in the case of Bencoding issue
 			System.out.println(e.toString());
 			return;
-		} catch (IOException e) {
+		} /* catch (IOException e) {
 			// Throw exception in the case of IO issues
 			System.out.println(e.toString());
 			return;
-		} catch (Exception e) {
+		} */ catch (Exception e) {
 			// In general or other case exceptions, throw an exception.
 			System.out.println("Unknown Exception");
 			e.printStackTrace();
