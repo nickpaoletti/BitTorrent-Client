@@ -4,6 +4,11 @@ package btclient.message;
  * 
  * @author Nick Paoletti
  * @author Daniel Selmon
+<<<<<<< HEAD
+=======
+ * 
+ * This is a wrapper class for a piece message.
+>>>>>>> 7a88bad1632fa639732138a69e36be3df8ea8b93
  *
  */
 public class PieceMessage extends Message {

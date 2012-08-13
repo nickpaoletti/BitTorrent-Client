@@ -43,6 +43,11 @@ public class Peer {
 		'o', 'c', 'o', 'l', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
+	private int peerUploaded;
+	private int peerDownloaded;
+	
+
 	/**
 	 * 
 	 * @param ip
@@ -259,5 +264,21 @@ public class Peer {
 			}
 			this.socket = null;
 		}
+	}
+	
+	public int getDownloaded(){
+		return peerDownloaded;
+	}
+	
+	public int getUploaded(){
+		return peerUploaded;
+	}
+	
+	public void addDownloaded(int bytesize){
+		peerDownloaded += bytesize;
+	}
+	
+	public void addUploaded(int bytesize){
+		peerUploaded += bytesize;
 	}
 }
