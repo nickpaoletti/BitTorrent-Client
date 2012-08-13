@@ -21,9 +21,14 @@ import java.util.logging.Logger;
  */
 
 import btclient.message.Message;
-
+/**
+ * Peer.java
+ * 
+ * @author Nick Paoletti
+ * @author Daniel
+ *
+ */
 public class Peer {
-
 	private static final Logger log = Logger.getLogger(Peer.class.getName());
 	private String ip;
 	private byte[] peerId;
@@ -33,7 +38,18 @@ public class Peer {
 	private InputStream in;
 	private OutputStream out;
 	private boolean isConnected;
-
+	private static final byte[] HANDSHAKE_TEMPLATE = new byte[] { 19, 'B', 'i',
+		't', 'T', 'o', 'r', 'r', 'e', 'n', 't', ' ', 'p', 'r', 'o', 't',
+		'o', 'c', 'o', 'l', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	/**
+	 * 
+	 * @param ip
+	 * @param port
+	 * @param peerid
+	 * @param numPieces
+	 */
 	public Peer(String ip, int port, byte[] peerid, int numPieces) {
 		this.ip = ip;
 		this.peerId = peerid;
@@ -41,49 +57,76 @@ public class Peer {
 		// Defaults to "false"
 		this.bitfield = new boolean[numPieces];
 	}
-	
+	/**
+	 * 
+	 * @param bitfield
+	 */
 	public void newBitfield(boolean[] bitfield){
 		this.bitfield = bitfield;
 	}
-	
+	/**
+	 * 
+	 * @return
+	 */
 	public String getIP() {
 		return ip;
 	}
-
+	/**
+	 * 
+	 * @return
+	 */
 	public boolean getIsConnected(){
 		return this.isConnected;
 	}
-	
+	/**
+	 * 
+	 * @param status
+	 */
 	public void changeStatus(boolean status){
 		this.isConnected = status;
 	}
-	
+	/**
+	 * 
+	 */
 	public void printBitfield(){
 		System.out.println("");
 		for (int i = 0; i < bitfield.length; i ++){
 			System.out.print(i + ":" + bitfield[i] + ",");
 		}
 	}
+	/**
+	 * 
+	 * @return
+	 */
 	public byte[] getPeerId() {
 		return this.peerId;
 	}
-
+	/**
+	 * 
+	 * @return
+	 */
 	public int getPort() {
 		return port;
 	}
-
+	/**
+	 * 
+	 * @return
+	 */
 	public boolean[] getBitfield() {
 		return this.bitfield;
 	}
-	
+	/**
+	 * 
+	 * @param index
+	 * @param status
+	 */
 	public void changeBitfield(int index, boolean status){
 		bitfield[index] = status;
 		return;
 	}
-
 	@Override
 	public String toString() {
-		if (this.peerId != null) {
+		if(this.peerId != null) {
 			try {
 				return new String(this.peerId, "US-ASCII") + "@" + this.ip
 						+ ":" + this.port;
@@ -92,9 +135,7 @@ public class Peer {
 			}
 		}
 		return "Peer @ " + this.ip + ":" + this.port;
-
 	}
-
 	/**
 	 * Returns the next Message on this peer's input stream, or {@code null} if
 	 * no message is available.
@@ -112,7 +153,6 @@ public class Peer {
 		}
 		return null;
 	}
-
 	/**
 	 * Returns the next Message on this peer's input stream, blocking until it
 	 * arrives.
@@ -126,55 +166,49 @@ public class Peer {
 	public Message getNextMessageBlocking() throws IOException {
 		return Message.decode(this.in);
 	}
-
+	/**
+	 * 
+	 * @param m
+	 * @throws IOException
+	 */
 	public synchronized void sendMessage(Message m) throws IOException {
 		Message.encode(m, this.out);
 		if (RUBTClient.keepRunning == false){
 			throw new EOFException("Program closed");
 		}
 	}
-
-	public static final byte[] HANDSHAKE_TEMPLATE = new byte[] { 19, 'B', 'i',
-			't', 'T', 'o', 'r', 'r', 'e', 'n', 't', ' ', 'p', 'r', 'o', 't',
-			'o', 'c', 'o', 'l', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-	
+	/**
+	 * 
+	 * @throws UnknownHostException
+	 * @throws IOException
+	 */
 	private void initializeStreams() throws UnknownHostException, IOException{
 		this.socket = new Socket(ip, port);
 		this.in = this.socket.getInputStream();
 		this.out = this.socket.getOutputStream();
 	}
-
 	/**
 	 * Handshakes with the remote peer.
 	 * 
 	 * @return
 	 * @throws IOException
 	 */
-	public boolean handshake(final byte[] infoHash, final byte[] localPeerId)
-			throws IOException {
+	public boolean handshake(final byte[] infoHash, final byte[] localPeerId) throws IOException {
 		System.out.println("Handshaking with peer " + toString());
-		
 		initializeStreams();
-		
 		byte[] sent = new byte[HANDSHAKE_TEMPLATE.length];
 		System.arraycopy(HANDSHAKE_TEMPLATE, 0, sent, 0, sent.length);
 		System.arraycopy(infoHash, 0, sent, 28, infoHash.length);
 		System.arraycopy(localPeerId, 0, sent, 48, localPeerId.length);
-
 		byte[] received = new byte[sent.length];
-
 		DataOutputStream dout = new DataOutputStream(this.out);
 		DataInputStream din = new DataInputStream(this.in);
-
 		dout.write(sent);
 		din.readFully(received);
 		byte[] sentPstr = Arrays.copyOfRange(sent, 0, 21);
 		byte[] recvPstr = Arrays.copyOfRange(received, 0, 21);
 		byte[] recvInfo = Arrays.copyOfRange(received, 28, 48);
 		byte[] recvPeerId = Arrays.copyOfRange(received, 48, 68);
-
 		if (!Arrays.equals(sentPstr, recvPstr)) {
 			log.severe("Protocol string did not match in received handshake from "
 					+ this);
@@ -194,10 +228,11 @@ public class Peer {
 					+ this);
 			return false;
 		}
-
 		return true;
 	}
-
+	/**
+	 * 
+	 */
 	public void disconnect() {
 
 		if (this.in != null) {

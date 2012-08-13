@@ -1,30 +1,28 @@
 package btclient;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
 
-/* TrackerInfo.java
+import java.util.ArrayList;
+/**
+ *  TrackerInfo.java
  * 
- * by Nick Paoletti and Daniel Selmon
+ * @author Nick Paoletti
+ * @author Daniel Selmon
  * 
  * This is the TrackerInfo object. This object stores the Metadata from the .torrent file in a very
  * easy to understand fashion. It also stores the currently downloaded pieces of the file specified
  * in the .torrent file, and has a method to merge them into a File object.
  */
-
 public class TrackerInfo{
 	//Fields stored within the tracker info, corresponding to the values found in a HTTP GET request.
 	private TorrentInfo mTorrentInfo;
 	private byte[] userPeerId;
 	private int mIncomplete, mDownloaded, mComplete, mMinInterval, mInterval;
 	private ArrayList<Peer> mPeers;
-	
-	//Create the TrackerInfo object by initializing the list of peers.
+	/**
+	 * 	Create the TrackerInfo object by initializing the list of peers.
+	 */
 	public TrackerInfo(){
 		mPeers = new ArrayList<Peer>();
 	}
-
 	//These methods are used in Metadata to read in information from the tracker and store it
 	//within a TrackerInfo object.
 	public void setTorrentInfo(TorrentInfo info) {
@@ -72,7 +70,12 @@ public class TrackerInfo{
 	public ArrayList<Peer> getPeers() {
 		return mPeers;
 	}
-	
+	/**
+	 * 
+	 * @param torrentData
+	 * @param state
+	 * @return
+	 */
 	public String makeURL(TorrentInfo torrentData, String state){
 		String url = "";
 		//Used for first announce and the subsequent HTTP GET request.
@@ -93,10 +96,6 @@ public class TrackerInfo{
 			+ "&peer_id="+ userPeerId + "&port=6881" + "&uploaded=" + FileManager.uploaded + "&downloaded=" + FileManager.downloaded + 
 			"&left=" + (torrentData.file_length - FileManager.downloaded) + "&event=stopped";
 		}
-		return url;
-		
+		return url;	
 	}
-	
-	
-
 }
