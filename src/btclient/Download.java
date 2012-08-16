@@ -44,6 +44,7 @@ public class Download implements Runnable{
          * @throws Exception
          */
         public void downloadFile() throws Exception{
+        		//Initialize information fields to be stored within the FileManager
                 TrackerInfo tracker = FileManager.tracker;
                 TorrentInfo info = FileManager.info;
                 Peer designatedPeer = findApprovedPeers(tracker);
@@ -69,11 +70,13 @@ public class Download implements Runnable{
                                                 System.out.println(designatedPeer + " sent unchoke message.");
                                                 Message temp = makeRequest(designatedPeer, tracker);
                                                 //If you want something, write a Request.Message message = designatedPeer.getNextMessageBlocking();
+                                                //If there's no piece you want, it will return null. 
                                                 if (temp != null){
                                                         designatedPeer.sendMessage(temp);
                                                 }
                                                 break;
                                         }
+                                        //when the peer is interested in a piece, unchoke them if you do not have your max number of unchoked peers.
                                         case Message.TYPE_INTERESTED: {
                                                 System.out.println(designatedPeer + " is interested in a piece.");
                                                 if (FileManager.unchokedPeers > FileManager.maxUnchokedPeers){
@@ -89,16 +92,19 @@ public class Download implements Runnable{
                                         }
                                         case Message.TYPE_UNINTERESTED:
                                                 break;
+                                        //If a peer sends a Have Message, update that peer's bitfield.
                                         case Message.TYPE_HAVE: {
                                                 System.out.println(designatedPeer + " sent a Have Message for Index " + ((HaveMessage)message).getIndex());
                                                 designatedPeer.sendMessage(analyzeHave((HaveMessage)message, designatedPeer));
                                                 break;
                                         }
+                                        //If a peer sends a bitfield, update their bitfield.
                                         case Message.TYPE_BITFIELD: {
                                                 System.out.println(designatedPeer + " sent a bitfield.");
                                                 designatedPeer.sendMessage(analyzeBitfield(designatedPeer, (BitfieldMessage)message));
                                                 break;
                                         }
+                                        //If a peer sends a request message, send them the corresponsing piece.
                                         case Message.TYPE_REQUEST: {
                                                 System.out.println(designatedPeer + " requested Piece: " + ((RequestMessage)message).getIndex() + " at offset " + 
                                                                 ((RequestMessage)message).getOffset());
@@ -107,6 +113,7 @@ public class Download implements Runnable{
                                                 designatedPeer.sendMessage(pm);
                                                 break;
                                         }
+                                        //If the peer sends a piece, save the piece to your hard disk.
                                         case Message.TYPE_PIECE: {
                                                 System.out.println(designatedPeer + " sent piece at Index #" + ((PieceMessage)message).getIndex() + 
                                                                 " at offset " + ((PieceMessage)message).getOffset());
@@ -122,6 +129,7 @@ public class Download implements Runnable{
                                                         }
 
                                                 }
+                                                //If there are pieces you still want, send a request for a piece.
                                                 Message reqmsg = makeRequest(designatedPeer, tracker);
                                                 if (reqmsg != null) {
                                                         designatedPeer.sendMessage(reqmsg);
@@ -133,7 +141,7 @@ public class Download implements Runnable{
                                         }
                                 }
                                 else {
-                                        //I should have a keep alive message?
+                                	//I should have a keep alive message?
                                 }
                         }
                         catch (EOFException eof){
@@ -145,19 +153,23 @@ public class Download implements Runnable{
                                 designatedPeer.disconnect();
                                 break;
                         }
+                        //If the peer throws a socket exception, close the socket.
                         catch (SocketException se){
                                 System.out.println("Error with Peer " + designatedPeer);
                                 FileManager.approvedPeers.remove(designatedPeer);
                                 designatedPeer.disconnect();
                         }
                 }
-                //Close input streams. Close socket.
+                //Program has been exited gracefully. Close input streams. Close socket.
                 new URL(FileManager.tracker.makeURL(info, "completed"));
                 new URL(FileManager.tracker.makeURL(info, "stopped"));
                 FileManager.approvedPeers.remove(designatedPeer);
                 designatedPeer.disconnect();
         }
         /**
+         * 
+         * Fulfills a peers request for a message by sending them the corresponding piece of data in a PieceMessage.
+         * Updates how much that peer has downloaded and how much you have uploaded.
          * 
          * @param request
          * @return
