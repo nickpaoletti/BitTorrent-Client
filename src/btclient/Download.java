@@ -288,6 +288,8 @@ public class Download implements Runnable{
                 }
 
         	}
+        	
+        	//THIS MUST BE CHANGED - you could have In progress parts. Also what if you swap peers while one is 'designated' for a piece?
         	FileManager.fileComplete = true;
         	return null;
 		}
