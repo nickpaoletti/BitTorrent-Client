@@ -41,7 +41,8 @@ public class FileManager{
          * @param filename
          * @throws IOException
          */
-        public static void storeFileProgress(String filename) throws IOException {
+        //Synchronized for blocking.
+        public static synchronized void storeFileProgress(String filename) throws IOException {
                 FileWriter write = new FileWriter(filename.substring(0, filename.lastIndexOf(".mp3")) + "PROGRESS.txt");
                 BufferedWriter out = new BufferedWriter(write);
                 for (int i = 0; i < bitfield.length; i++){
@@ -117,6 +118,8 @@ public class FileManager{
                 oldUploaded = 0;
                 oldDownloaded = 0;
                 fileComplete = false;
+                downloadSpeed = 0;
+                uploadSpeed = 0;
         }
         
         public static void updateRarity(boolean[] peerBitfield){

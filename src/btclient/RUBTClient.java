@@ -82,6 +82,15 @@ class RUBTClient {
 				peerThreads.add(new Thread(peer));
 				peerThreads.get(i).start();
 			}
+			
+			//Initialize GUI.
+			final boolean[] chunky = new boolean[FileManager.info.piece_hashes.length];
+			tv = new TorrentView(chunky);
+			tv.createTestThread();
+			tv.startTestThread();
+			tv.setFilename(args[1]);
+			tv.setFileSize(FileManager.info.file_length/1048576.0 + " MB");
+			
 			Runnable ta = new TrackerAnnounce();
 			Thread trackerthread = new Thread(ta);
 			trackerthread.start();
@@ -94,12 +103,7 @@ class RUBTClient {
 			Thread speedcalcthread = new Thread(sc);
 			speedcalcthread.start();
 			
-			final boolean[] chunky = new boolean[FileManager.info.piece_hashes.length];
-			tv = new TorrentView(chunky);
-			tv.createTestThread();
-			tv.startTestThread();
-			tv.setFilename(args[1]);
-			tv.setFileSize(FileManager.info.file_length/1048576.0 + " MB");
+			
 			
 
 			BufferedReader quitStatus = new BufferedReader(new InputStreamReader(System.in));
@@ -113,6 +117,9 @@ class RUBTClient {
 			chokingthread.interrupt();
 			speedcalcthread.interrupt();
 			FileManager.storeFileProgress(args[1]);
+			
+			//HACK BECAUSE MY GRACEFUL EXIT WONT WORK AND I DONT HAVE TIME.
+			System.exit(0);
 		} catch (BencodingException e) {
 			// Throw exception in the case of Bencoding issue
 			System.out.println(e.toString());

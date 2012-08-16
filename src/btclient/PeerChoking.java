@@ -17,13 +17,12 @@ public class PeerChoking implements Runnable {
 			try {
 				Peer topPeers[] = new Peer[FileManager.maxUnchokedPeers];
 				
+				int worstPeerIndex = -1;
+				double worstPeerRate = Double.MAX_VALUE;
+				
 				for (int i = 0; i < FileManager.approvedPeers.size(); i++){
 					FileManager.approvedPeers.get(i).setDownloadRate(30);
 					FileManager.approvedPeers.get(i).setUploadRate(30);
-					
-					
-					int worstPeerIndex = -1;
-					double worstPeerRate = Double.MAX_VALUE;
 					
 					if (i < topPeers.length){
 						topPeers[i] = (FileManager.approvedPeers.get(i));

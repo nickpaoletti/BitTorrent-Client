@@ -194,6 +194,7 @@ public class Peer {
 	 */
 	private void initializeStreams() throws UnknownHostException, IOException{
 		this.socket = new Socket(ip, port);
+		//socket.setSoTimeout(10000);
 		this.in = this.socket.getInputStream();
 		this.out = this.socket.getOutputStream();
 	}
